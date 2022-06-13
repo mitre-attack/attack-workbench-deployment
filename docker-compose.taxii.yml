@@ -1,6 +1,27 @@
 version: "3.9"
 
 services:
+  taxii-server:
+    container_name: attack-workbench-taxii-server
+    image: ghcr.io/mitre-attack/attack-workbench-taxii-server:develop
+    depends_on:
+      - rest-api
+      - taxii-server-cache # delete this line if you wish to use in-memory cache
+    ports:
+      - "443:443"
+    volumes:
+      - ./resources/taxii/config:/app/config:ro
+    environment:
+      - TAXII_ENV=dev
+
+  # delete this block if you wish to use in-memory cache
+  taxii-server-cache:
+    container_name: attack-workbench-taxii-server-cache
+    image: memcached:latest
+    ports:
+      - "11211:11211"
+    entrypoint: 'memcached -I "${TAXII_CACHE_MAX_ITEM_SIZE}" -m "${TAXII_CACHE_MEM_SIZE}"'
+
   frontend:
     container_name: attack-workbench-frontend
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:develop
