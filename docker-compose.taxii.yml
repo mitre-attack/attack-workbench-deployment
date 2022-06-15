@@ -64,3 +64,8 @@ services:
     image: mongo
     ports:
       - "27017:27017"
+    volumes:
+      - taxii-cache:/data/db
+
+volumes:
+  workspace-data:
