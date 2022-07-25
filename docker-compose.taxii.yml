@@ -19,7 +19,7 @@ services:
     image: memcached:latest
     ports:
       - "${TAXII_CACHE_PORT:-11211}:${TAXII_CACHE_PORT:-11211}"
-    entrypoint: 'memcached -I "${TAXII_CACHE_MAX_ITEM_SIZE}" -m "${TAXII_CACHE_MEM_SIZE}"'
+    entrypoint: 'memcached -I "${TAXII_CACHE_MAX_ITEM_SIZE:-50m}" -m "${TAXII_CACHE_MEM_SIZE:-4096}"'
 
   frontend:
     container_name: attack-workbench-frontend
