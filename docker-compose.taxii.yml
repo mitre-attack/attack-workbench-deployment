@@ -3,8 +3,8 @@ version: "3.9"
 services:
   taxii:
     container_name: attack-workbench-taxii-server
-#    image: ghcr.io/mitre-attack/attack-workbench-taxii-server:develop
-    image: attack-workbench-taxii-server:latest
+    image: ghcr.io/mitre-attack/attack-workbench-taxii-server:develop
+    #image: attack-workbench-taxii-server:latest
     depends_on:
       - rest-api
     ports:
