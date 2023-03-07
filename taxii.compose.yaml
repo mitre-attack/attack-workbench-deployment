@@ -29,12 +29,13 @@ services:
       - collection-manager
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./resources/taxii/nginx.conf:/etc/nginx/nginx.conf:ro
       - letsencrypt:/etc/letsencrypt:ro
     environment:
       - "CERTBOT_LE_FQDN:${CERTBOT_LE_FQDN}"
-      - "CERBOT_LE_EMAIL:${CERBOT_LE_EMAIL}"
+      - "CERTBOT_LE_EMAIL:${CERTBOT_LE_EMAIL}"
       - "CERTBOT_LE_ACME_SERVER:${CERTBOT_LE_ACME_SERVER}"
       - "CERTBOT_LE_RSA_KEY_SIZE:${CERTBOT_LE_RSA_KEY_SIZE}"
 
