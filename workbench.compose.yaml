@@ -10,7 +10,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./docker-compose-resources/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./resources/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
   rest-api:
     container_name: attack-workbench-rest-api
@@ -20,7 +20,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./docker-compose-resources/rest-api/rest-api-service-config.json:/usr/src/app/resources/rest-api-service-config.json:ro
+      - ./resources/rest-api/rest-api-service-config.json:/usr/src/app/resources/rest-api-service-config.json:ro
     environment:
       - DATABASE_URL=mongodb://attack-workbench-database/attack-workspace
       - SERVICE_ACCOUNT_APIKEY_ENABLE=true
@@ -43,3 +43,9 @@ services:
     image: mongo
     ports:
       - "27017:27017"
+    volumes:
+      - workspace-data:/data/db
+
+volumes:
+  workspace-data:
+
