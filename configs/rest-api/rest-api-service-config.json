@@ -1,0 +1,29 @@
+{
+  "serviceAuthn": {
+    "basicApikey": {
+      "enable": true,
+      "serviceAccounts": [
+        {
+          "name": "taxii-server",
+          "apikey": "secret-squirrel",
+          "serviceRole": "read-only"
+        }
+      ]
+    },
+    "challengeApikey": {
+      "enable": true,
+      "serviceAccounts": [
+        {
+          "name": "collection-manager",
+          "apikey": "sample-key",
+          "serviceRole": "collection-manager"
+        },
+        {
+          "name": "taxii-server",
+          "apikey": "secret-squirrel",
+          "serviceRole": "read-only"
+        }
+      ]
+    }
+  }
+}
