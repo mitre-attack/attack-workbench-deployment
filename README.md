@@ -1,51 +1,80 @@
 # ATT&CK Workbench Deployment
 
-This repository contains Docker templates and helper files to assist with the initialization of the ATT&CK Workbench.
+This repository contains Docker Compose templates and helper files to assist with the initialization of the ATT&CK Workbench.
 
-## TAXII 2.1 Server
+## Getting Started
 
-This section pertains to `docker-compose.taxii.yml`.
+1. Clone this repository:
+   ```
+   git clone https://github.com/your-repo/attack-workbench-deployment.git
+   cd attack-workbench-deployment
+   ```
 
-This Docker Compose template adds two containers in addition to what is already included in `docker-compose.yml`:
-- [taxii-server](https://github.com/mitre-attack/attack-workbench-taxii-server)
-- taxii-server-cache (_optional_)
+2. Create the required configuration files:
+   - `configs/rest-api/.env`: Define environment variables for the REST API service.
+   - `configs/taxii/config/.env`: Define environment variables for the TAXII server service (if included).
 
-The _taxii-server-cache_ container is an optional add-on that allows the TAXII server to use an instance of `memcached` as opposed to 
-an in-memory cache. If you prefer to use the in-memory cache, just delete or comment-out the appropriate lines in 
-the template.
+   Configuration templates are provided for the REST API and TAXII 2.1 servers:
+   ```bash
+   cp configs/rest-api/template.env configs/rest-api/.env
+   cp configs/taxii/config/template.env configs/taxii/config/.env
+   ```
 
-The TAXII server requires at least one `dotenv` configuration file at runtime. This file will be volume-mounted to the 
-container. On the Docker host, place the dotenv file in `resources/taxii/config/` and ensure that `TAXII_ENV` can be read 
-by the Docker Compose template, as this environment variable will determine the name of the `dotenv` that the TAXII 
-application will search for. For example:
-- setting `TAXII_ENV=dev` would force the server to attempt to load `resources/taxii/config/dev.env`
-- setting `TAXII_ENV=prod` would force the server to attempt to load `resources/taxii/config/prod.env`
-- **not** setting `TAXII_ENV` would force the server to attempt to load `resources/taxii/config/.env`
+3. Start the Docker Compose services:
+   - To include the TAXII server, run:
+     ```
+     docker-compose --profile with-taxii up -d
+     ```
+   - To exclude the TAXII server, run:
+     ```
+     docker-compose up -d
+     ```
 
-A dotenv [template](./resources/taxii/config/template.env) is included to help you started.
+## Configuration
 
-Additionally, if the TAXII server is configured to enable HTTPS, then two `pem` files are required:
-- `resources/taxii/config/private-key.pem`
-- `resources/taxii/config/public-certificate.pem`
+### ATT&CK Workbench REST API
 
-Alternatively, if you prefer to use environment variables over static `pem` files, you can base64 encode the `pem` files 
-and set them via `TAXII_SSL_PRIVATE_KEY` and `TAXII_SSL_PUBLIC_KEY` in your dotenv file. 
+The REST API service is configured using environment variables defined in the `configs/rest-api/.env` file. Here's an example:
 
-### Getting Started
-To start the Docker Compose:
-
-1. Set `TAXII_ENV` on the host where Docker Compose is running.
-```shell
-export TAXII_ENV=dev
+```
+# configs/rest-api/.env
+DATABASE_URL=mongodb://attack-workbench-database/attack-workspace
+AUTHN_MECHANISM=anonymous
 ```
 
-2. Execute the docker-compose command, taking care to specify the correct template using the `-f` flag, and taking care 
-to specify the appropriate dotenv file using the `--env-file` flag.
-```shell
-docker-compose -f docker-compose.taxii.yml --env-file resources/taxii/config/${TAXII_ENV}.env up
-```
+Additionally, an optional JSON configuration file can be used by setting the `JSON_CONFIG_PATH` environment variable to point to `configs/rest-api/rest-api-service-config.json`.
 
-To stop the Docker Compose:
-```shell
-docker-compose -f docker-compose.taxii.yml --env-file resources/taxii/config/${TAXII_ENV}.env down
-```
+### ATT&CK Workbench TAXII 2.1 Server
+
+The ATT&CK Workbench TAXII 2.1 API is an optional extension of the ATT&CK Workbench. It is defined in the `taxii` service of the included [Docker Compose template](./docker-compose.yml).
+
+The TAXII server requires at least one `.env` configuration file at runtime. This file will be volume-mounted to the container. On the Docker host, place the `.env` file in `configs/taxii/config/`.
+
+The `TAXII_ENV` environment variable determines the name of the `.env` file that the TAXII application will load. For example:
+- `TAXII_ENV=dev` will load `configs/taxii/config/dev.env`
+- `TAXII_ENV=prod` will load `configs/taxii/config/prod.env`
+- If `TAXII_ENV` is not set, it will load `configs/taxii/config/.env`
+
+A `.env` [template](./configs/taxii/config/template.env) is included to help you get started.
+
+Additionally, if the TAXII server is configured to use HTTPS, you'll need to provide the following files:
+- `configs/taxii/config/private-key.pem`
+- `configs/taxii/config/public-certificate.pem`
+
+Alternatively, you can base64 encode the `pem` files and set them via `TAXII_SSL_PRIVATE_KEY` and `TAXII_SSL_PUBLIC_KEY` in your `.env` file.
+
+## Using Docker Compose Profiles
+
+This repository includes a Docker Compose profile to optionally include or exclude the TAXII server service.
+
+- To include the TAXII server, use the `with-taxii` profile:
+  ```
+  docker-compose --profile with-taxii up -d
+  ```
+
+- To exclude the TAXII server, run Docker Compose without any profile:
+  ```
+  docker-compose up -d
+  ```
+
+The `with-taxii` profile is defined in the `docker-compose.yml` file and includes the `taxii` service.
