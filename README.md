@@ -144,6 +144,16 @@ Use Compose profiles to include or exclude the optional TAXII service:
 
 The `with-taxii` profile is defined in [`docker-compose.yml`](./docker-compose.yml).
 
+## 🛡️ Using Custom Certificates (PKI / CA Bundles)
+
+In zero-trust environments such as those using ZScaler or deep packet inspection, ATT&CK Workbench may require a custom certificate authority (CA) bundle to communicate with external resources (e.g., downloading remote collection indexes).
+
+You can provide your own PKI certificates by following the guide in [`certs/README.md`](./certs/README.md).
+
+This setup augments the main deployment with an additional Compose file:
+```bash
+docker compose -f compose.yaml -f compose.certs.yaml up -d
+````
 ## 🧑‍💻 Contributing / Development
 
 If you're working on ATT\&CK Workbench source code:
