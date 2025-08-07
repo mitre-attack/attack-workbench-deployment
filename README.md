@@ -1,80 +1,161 @@
-# ATT&CK Workbench Deployment
+# ATT\&CK Workbench Deployment Guide
 
-This repository contains Docker Compose templates and helper files to assist with the initialization of the ATT&CK Workbench.
+This repository provides a ready-to-use [Docker Compose](https://docs.docker.com/compose/) setup for deploying the [ATT\&CK Workbench](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend) application and its related services.
 
-## Getting Started
+---
 
-1. Clone this repository:
-   ```
-   git clone https://github.com/your-repo/attack-workbench-deployment.git
+## 🚀 Quick Start (Recommended)
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/mitre-attack/attack-workbench-deployment.git
    cd attack-workbench-deployment
    ```
 
-2. Create the required configuration files:
-   - `configs/rest-api/.env`: Define environment variables for the REST API service.
-   - `configs/taxii/config/.env`: Define environment variables for the TAXII server service (if included).
+2. **Configure environment variables**:
 
-   Configuration templates are provided for the REST API and TAXII 2.1 servers:
    ```bash
    cp configs/rest-api/template.env configs/rest-api/.env
+   # (Optional) For TAXII support:
    cp configs/taxii/config/template.env configs/taxii/config/.env
    ```
 
-3. Start the Docker Compose services:
-   - To include the TAXII server, run:
-     ```
-     docker-compose --profile with-taxii up -d
-     ```
-   - To exclude the TAXII server, run:
-     ```
-     docker-compose up -d
-     ```
+3. **Start the Workbench application**:
 
-## Configuration
+   ```bash
+   docker compose up -d
+   ```
 
-### ATT&CK Workbench REST API
+4. **(Optional) Start with TAXII server**:
 
-The REST API service is configured using environment variables defined in the `configs/rest-api/.env` file. Here's an example:
+   ```bash
+   docker compose --profile with-taxii up -d
+   ```
 
+## 🧠 What Is This?
+
+The ATT\&CK Workbench is composed of several services:
+
+* A **Frontend UI**
+* A **REST API backend**
+* A **MongoDB** database
+* An optional **TAXII 2.1 Server**
+
+This repository lets you deploy all of them using Docker Compose. You can choose to:
+
+* ✅ Use **published Docker images** (default and recommended)
+* 🛠️ Or **build from source** (for development or customization)
+
+## 🔄 Version Compatibility
+
+The ATT&CK Workbench services are tied to specific versions of the ATT&CK Specification, maintained by the [ATT&CK Data Model](https://github.com/mitre-attack/attack-data-model). Each release of the Workbench frontend and REST API aligns with a major version of the ATT&CK Specification.
+
+Please refer to the [COMPATIBILITY.md](./COMPATIBILITY.md) file for a complete compatibility matrix.
+
+## 🧩 Deployment Options
+
+### 1. **Using Published Docker Images** ✅
+
+This is the default mode and best for most users. No need to clone or modify Workbench source code — the Compose file pulls prebuilt images directly from the GitHub Container Registry:
+
+```yaml
+services:
+  rest-api:
+    image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:latest
 ```
-# configs/rest-api/.env
+
+### 2. **Building from Source** (Advanced)
+
+If you want to customize or test unreleased changes, you can modify the `compose.yaml` to build images locally:
+
+```yaml
+services:
+  rest-api:
+    build: ../attack-workbench-rest-api
+```
+
+> **Note**: The provided Compose file is preconfigured for published images but can be adapted to support builds.
+
+## ⚙️ Configuration
+
+### REST API `.env`
+
+Edit the `.env` file at `configs/rest-api/.env` to configure the backend.
+
+Example:
+
+```env
 DATABASE_URL=mongodb://attack-workbench-database/attack-workspace
 AUTHN_MECHANISM=anonymous
 ```
 
-Additionally, an optional JSON configuration file can be used by setting the `JSON_CONFIG_PATH` environment variable to point to `configs/rest-api/rest-api-service-config.json`.
+Optional: You can also provide a JSON config file and reference it via:
 
-### ATT&CK Workbench TAXII 2.1 Server
+```env
+JSON_CONFIG_PATH=configs/rest-api/rest-api-service-config.json
+```
 
-The ATT&CK Workbench TAXII 2.1 API is an optional extension of the ATT&CK Workbench. It is defined in the `taxii` service of the included [Docker Compose template](./docker-compose.yml).
+### TAXII Server (Optional)
 
-The TAXII server requires at least one `.env` configuration file at runtime. This file will be volume-mounted to the container. On the Docker host, place the `.env` file in `configs/taxii/config/`.
+The TAXII 2.1 server is an optional sidecar service to expose ATT\&CK data via the TAXII protocol.
 
-The `TAXII_ENV` environment variable determines the name of the `.env` file that the TAXII application will load. For example:
-- `TAXII_ENV=dev` will load `configs/taxii/config/dev.env`
-- `TAXII_ENV=prod` will load `configs/taxii/config/prod.env`
-- If `TAXII_ENV` is not set, it will load `configs/taxii/config/.env`
+1. Use `.env` files to configure the server:
 
-A `.env` [template](./configs/taxii/config/template.env) is included to help you get started.
+   * `configs/taxii/config/.env` (default)
+   * or use the `TAXII_ENV` variable to load `dev.env`, `prod.env`, etc.
 
-Additionally, if the TAXII server is configured to use HTTPS, you'll need to provide the following files:
-- `configs/taxii/config/private-key.pem`
-- `configs/taxii/config/public-certificate.pem`
+2. Example environment config usage:
 
-Alternatively, you can base64 encode the `pem` files and set them via `TAXII_SSL_PRIVATE_KEY` and `TAXII_SSL_PUBLIC_KEY` in your `.env` file.
+```env
+TAXII_ENV=prod
+```
 
-## Using Docker Compose Profiles
+3. If enabling HTTPS:
 
-This repository includes a Docker Compose profile to optionally include or exclude the TAXII server service.
+   * Provide PEM files:
 
-- To include the TAXII server, use the `with-taxii` profile:
+     ```
+     configs/taxii/config/private-key.pem
+     configs/taxii/config/public-certificate.pem
+     ```
+   * OR base64-encode and set them via:
+
+     ```env
+     TAXII_SSL_PRIVATE_KEY=<base64>
+     TAXII_SSL_PUBLIC_KEY=<base64>
+     ```
+
+## 🧪 Docker Compose Profiles
+
+Use Compose profiles to include or exclude the optional TAXII service:
+
+* With TAXII:
+
+  ```bash
+  docker compose --profile with-taxii up -d
   ```
-  docker-compose --profile with-taxii up -d
+
+* Without TAXII:
+
+  ```bash
+  docker compose up -d
   ```
 
-- To exclude the TAXII server, run Docker Compose without any profile:
-  ```
-  docker-compose up -d
-  ```
+The `with-taxii` profile is defined in [`docker-compose.yml`](./docker-compose.yml).
 
-The `with-taxii` profile is defined in the `docker-compose.yml` file and includes the `taxii` service.
+## 🧑‍💻 Contributing / Development
+
+If you're working on ATT\&CK Workbench source code:
+
+* Clone the relevant service repositories
+* Modify the `compose.yaml` to build from local source (`build:` instead of `image:`)
+* Use volume mounts for live reloading if needed
+
+
+## 📎 Resources
+
+* [ATT\&CK Workbench Frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
+* [ATT\&CK REST API](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api)
+* [ATT\&CK TAXII Server](https://github.com/mitre-attack/attack-workbench-taxii-server)
+* [MongoDB Docker Image](https://hub.docker.com/_/mongo)
