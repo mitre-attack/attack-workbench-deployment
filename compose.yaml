@@ -3,21 +3,24 @@ services:
   frontend:
     container_name: attack-workbench-frontend
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:${ATTACKWB_FRONTEND_VERSION:-latest}
-    # Uncomment the following line to build from source (the path assumes that the source code is cloned in a directory adjacent to this repo)
-    # build: ../attack-workbench-frontend
     depends_on:
      - rest-api
     ports:
       - "${ATTACKWB_FRONTEND_HTTP_PORT:-80}:${ATTACKWB_FRONTEND_HTTP_PORT:-80}"
+      - "${ATTACKWB_FRONTEND_HTTPS_PORT:-443}:${ATTACKWB_FRONTEND_HTTPS_PORT:-443}"
     volumes:
       - ./configs/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      - "${ATTACKWB_FRONTEND_CERTS_PATH:-./certs}:/etc/nginx/certs:ro"
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   rest-api:
     container_name: attack-workbench-rest-api
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:${ATTACKWB_RESTAPI_VERSION:-latest}
-    # Uncomment the following line to build from source (the path assumes that the source code is cloned in a directory adjacent to this repo)
-    # build: ../attack-workbench-rest-api
     depends_on:
       - database
     ports:
@@ -32,6 +35,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   database:
     container_name: attack-workbench-database
@@ -47,12 +55,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   taxii:
     container_name: attack-workbench-taxii-server
     image: ghcr.io/mitre-attack/attack-workbench-taxii-server:${ATTACKWB_TAXII_VERSION:-latest}
-    # Uncomment the following line to build from source (the path assumes that the source code is cloned in a directory adjacent to this repo)
-    # build: ../attack-workbench-taxii-server
     depends_on:
       - rest-api
     ports:
@@ -65,6 +76,11 @@ services:
     profiles:
       - with-taxii
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   workspace-data:

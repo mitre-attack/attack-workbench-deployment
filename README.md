@@ -1,171 +1,162 @@
-# ATT\&CK Workbench Deployment Guide
+# ATT&CK Workbench Deployment
 
-This repository provides a ready-to-use [Docker Compose](https://docs.docker.com/compose/) setup for deploying the [ATT\&CK Workbench](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend) application and its related services.
+This repository contains deployment files for the ATT&CK Workbench, a web application for editing ATT&CK data represented in STIX. It is composed of a frontend SPA, a backend REST API, and a database. Optionally, you can deploy a "sidecar service" that makes your Workbench data available over a TAXII 2.1 API.
 
----
+## Deployment Options
 
-## 🚀 Quick Start (Recommended)
+### Docker Compose
 
-1. **Clone the repository**:
+The ATT&CK Workbench can be deployed using Docker Compose with two different configurations:
 
+#### 1. Using Pre-built Images (Recommended)
+
+Use `compose.yaml` to pull pre-built images directly from GitHub Container Registry (GHCR):
+
+```bash
+# Deploy with pre-built images
+docker compose up -d
+
+# Deploy with TAXII server
+docker compose --profile with-taxii up -d
+
+# Stop the deployment
+docker compose down
+```
+
+#### 2. Building from Source
+
+Use `compose.dev.yaml` in combination with `compose.yaml` to build images from source code:
+
+```bash
+# Build and deploy from source
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+
+# Build and deploy with TAXII server
+docker compose -f compose.yaml -f compose.dev.yaml --profile with-taxii up -d --build
+
+# Stop the deployment
+docker compose -f compose.yaml -f compose.dev.yaml down
+```
+
+**Note**: When building from source, you need the following three source repositories to be available as sibling directories to this deployment repository:
+
+- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/) 
+- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/) 
+- [attack-workbench-taxii-server](https://mitre-attack/attack-workbench-taxii-server/)
+
+The directory structure should look like this:
+```bash
+.
+├── attack-workbench-deployment
+├── attack-workbench-frontend
+├── attack-workbench-rest-api
+└── attack-workbench-taxii-server (optional)
+```
+
+### Kubernetes
+
+For production deployments, Kubernetes manifests with Kustomize are available in the `k8s/` directory. See [k8s/README.md](k8s/README.md) for detailed instructions.
+
+## Configuration
+
+### Environment Variables
+
+We make heavy use of string interpolation to minimize having to modify the Docker Compose manifest files (e.g., [compose.yaml](./compose.yaml)). Consequently, that means you must set a bunch of environment variables when using these templates. Fortunately, we've provided a dotenv template that you can source.
+
+Copy `template.env` to `.env` and customize the values as needed:
+
+```bash
+cp template.env .env
+```
+
+Available environment variables:
+
+| Variable | Default Value | Description |
+|----------|---------------|-------------|
+| **Docker Image Tags** | | |
+| `ATTACKWB_FRONTEND_VERSION` | `latest` | Frontend Docker image tag |
+| `ATTACKWB_RESTAPI_VERSION` | `latest` | REST API Docker image tag |
+| `ATTACKWB_TAXII_VERSION` | `latest` | TAXII server Docker image tag |
+| **HTTP Listener Ports** | | |
+| `ATTACKWB_FRONTEND_HTTP_PORT` | `80` | Frontend HTTP port |
+| `ATTACKWB_FRONTEND_HTTPS_PORT` | `443` | Frontend HTTPS port |
+| `ATTACKWB_RESTAPI_HTTP_PORT` | `3000` | REST API port |
+| `ATTACKWB_DB_PORT` | `27017` | MongoDB port |
+| `ATTACKWB_TAXII_HTTP_PORT` | `5002` | TAXII server port |
+| **SSL/TLS Configuration** | | |
+| `ATTACKWB_FRONTEND_CERTS_PATH` | `./certs` | Path to SSL certificates |
+| **TAXII Configuration** | | |
+| `ATTACKWB_TAXII_ENV` | `dev` | Specifies the name of the dotenv file to load (e.g., A value of `dev` tells the TAXII server to load `dev.env`) |
+
+### Service-Specific Configuration
+
+Each service has its own configuration directory:
+
+- **Frontend**: `configs/frontend/` - The frontend container is an Nginx instance which serves the frontend SPA and reverse proxies requests to the backend REST API. We provide a basic `nginx.conf` template in the aforementioned directory that should get you started. Refer to the [frontend documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend) for further details on customizing the SPA.
+- **REST API**: `configs/rest-api/` - The backend REST API loads runtime configurations from environment variables, as well as from a JSON configuration file. Templates are provided in the aforementioned directory. Refer to the [REST API usage documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/blob/main/USAGE.md#configuration) for further details on customizing the backend.
+- **TAXII Server**: `configs/taxii/config/` - The TAXII server loads all runtime configuration parameters from a dotenv file. The specific filename of the dotenv file is specified by the `ATTACKWB_TAXII_ENV` environment variable. For example, a value of `dev` tells the TAXII server to load `dev.env`.
+
+## Quick Start
+
+1. Clone this repository:
    ```bash
-   git clone https://github.com/mitre-attack/attack-workbench-deployment.git
+   git clone https://github.com/center-for-threat-informed-defense/attack-workbench-deployment.git
    cd attack-workbench-deployment
    ```
 
-2. **Configure environment variables**:
-
+2. Configure environment variables (optional):
    ```bash
-   cp configs/rest-api/template.env configs/rest-api/.env
-   # (Optional) For TAXII support:
-   cp configs/taxii/config/template.env configs/taxii/config/.env
+   cp template.env .env
+   # Edit .env with your preferred settings
    ```
 
-3. **Start the Workbench application**:
-
+3. Deploy using pre-built images:
    ```bash
    docker compose up -d
    ```
 
-4. **(Optional) Start with TAXII server**:
+4. Access the application at `http://localhost` (or your configured port)
 
+5. To include the TAXII server:
    ```bash
    docker compose --profile with-taxii up -d
    ```
 
-## 🧠 What Is This?
+## Data Persistence
 
-The ATT\&CK Workbench is composed of several services:
+MongoDB data is persisted in the `workspace-data` named Docker volume. Thus, the `database` service can be deleted and re-deployed without losing access to the database. The database volume will be remounted to the `database` service upon deployment.
 
-* A **Frontend UI**
-* A **REST API backend**
-* A **MongoDB** database
-* An optional **TAXII 2.1 Server**
+## Troubleshooting
 
-This repository lets you deploy all of them using Docker Compose. You can choose to:
+### Check Service Status
 
-* ✅ Use **published Docker images** (default and recommended)
-* 🛠️ Or **build from source** (for development or customization)
-
-## 🔄 Version Compatibility
-
-The ATT&CK Workbench services are tied to specific versions of the ATT&CK Specification, maintained by the [ATT&CK Data Model](https://github.com/mitre-attack/attack-data-model). Each release of the Workbench frontend and REST API aligns with a major version of the ATT&CK Specification.
-
-Please refer to the [COMPATIBILITY.md](./COMPATIBILITY.md) file for a complete compatibility matrix.
-
-## 🧩 Deployment Options
-
-### 1. **Using Published Docker Images** ✅
-
-This is the default mode and best for most users. No need to clone or modify Workbench source code — the Compose file pulls prebuilt images directly from the GitHub Container Registry:
-
-```yaml
-services:
-  rest-api:
-    image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:latest
-```
-
-### 2. **Building from Source** (Advanced)
-
-If you want to customize or test unreleased changes, you can modify the `compose.yaml` to build images locally:
-
-```yaml
-services:
-  rest-api:
-    build: ../attack-workbench-rest-api
-```
-
-> **Note**: The provided Compose file is preconfigured for published images but can be adapted to support builds.
-
-## ⚙️ Configuration
-
-### REST API `.env`
-
-Edit the `.env` file at `configs/rest-api/.env` to configure the backend.
-
-Example:
-
-```env
-DATABASE_URL=mongodb://attack-workbench-database/attack-workspace
-AUTHN_MECHANISM=anonymous
-```
-
-Optional: You can also provide a JSON config file and reference it via:
-
-```env
-JSON_CONFIG_PATH=configs/rest-api/rest-api-service-config.json
-```
-
-### TAXII Server (Optional)
-
-The TAXII 2.1 server is an optional sidecar service to expose ATT\&CK data via the TAXII protocol.
-
-1. Use `.env` files to configure the server:
-
-   * `configs/taxii/config/.env` (default)
-   * or use the `TAXII_ENV` variable to load `dev.env`, `prod.env`, etc.
-
-2. Example environment config usage:
-
-```env
-TAXII_ENV=prod
-```
-
-3. If enabling HTTPS:
-
-   * Provide PEM files:
-
-     ```
-     configs/taxii/config/private-key.pem
-     configs/taxii/config/public-certificate.pem
-     ```
-   * OR base64-encode and set them via:
-
-     ```env
-     TAXII_SSL_PRIVATE_KEY=<base64>
-     TAXII_SSL_PUBLIC_KEY=<base64>
-     ```
-
-## 🧪 Docker Compose Profiles
-
-Use Compose profiles to include or exclude the optional TAXII service:
-
-* With TAXII:
-
-  ```bash
-  docker compose --profile with-taxii up -d
-  ```
-
-* Without TAXII:
-
-  ```bash
-  docker compose up -d
-  ```
-
-The `with-taxii` profile is defined in [`docker-compose.yml`](./docker-compose.yml).
-
-## 🛡️ Using Custom Certificates (PKI / CA Bundles)
-
-In zero-trust environments such as those using ZScaler or deep packet inspection, ATT&CK Workbench may require a custom certificate authority (CA) bundle to communicate with external resources (e.g., downloading remote collection indexes).
-
-You can provide your own PKI certificates by following the guide in [`certs/README.md`](./certs/README.md).
-
-This setup augments the main deployment with an additional Compose file:
 ```bash
-docker compose -f compose.yaml -f compose.certs.yaml up -d
-````
-## 🧑‍💻 Contributing / Development
+# View running containers
+docker compose ps
 
-If you're working on ATT\&CK Workbench source code:
+# Show logs for all running containers
+docker compose logs
 
-* Clone the relevant service repositories
-* Modify the `compose.yaml` to build from local source (`build:` instead of `image:`)
-* Use volume mounts for live reloading if needed
+# Follow logs
+docker compose logs -f
 
+# Show logs for a specific container
+docker compose logs frontend
+docker compose logs rest-api  
+docker compose logs database
+docker compose logs taxii
+```
 
-## 📎 Resources
+## Contributing
 
-* [ATT\&CK Workbench Frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
-* [ATT\&CK REST API](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api)
-* [ATT\&CK TAXII Server](https://github.com/mitre-attack/attack-workbench-taxii-server)
-* [MongoDB Docker Image](https://hub.docker.com/_/mongo)
+Please refer to the [contribution guide](./docs/CONTRIBUTING.md) for contribution guidelines, as well as the [developer guide](./docs/DEVELOPMENT.md) for information on our release process.
+
+## License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details.
+
+## Support
+
+For issues and questions:
+- Check the [deployment repository issues](https://github.com/center-for-threat-informed-defense/attack-workbench-deployment/issues)
+- Refer to the main [ATT&CK Workbench documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
