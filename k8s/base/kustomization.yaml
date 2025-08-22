@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: attack-workbench
+
+resources:
+- namespace.yaml
+- configmap-nginx.yaml
+- configmap-rest-api.yaml
+- configmap-taxii.yaml
+- statefulset-mongodb.yaml
+- deployment-rest-api.yaml
+- deployment-taxii.yaml
+- deployment-frontend.yaml
+
+commonLabels:
+  app.kubernetes.io/name: attack-workbench
+  app.kubernetes.io/part-of: attack-workbench
+
+images:
+- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend
+  newTag: latest
+- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api
+  newTag: latest
+- name: ghcr.io/mitre-attack/attack-workbench-taxii-server
+  newTag: latest

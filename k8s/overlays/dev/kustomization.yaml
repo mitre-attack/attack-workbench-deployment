@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+namePrefix: dev-
+
+commonLabels:
+  environment: dev
+
+patchesStrategicMerge:
+- configmap-rest-api-dev.yaml
+- configmap-taxii-dev.yaml
+
+replicas:
+- name: frontend
+  count: 1
+- name: rest-api
+  count: 1
+- name: taxii
+  count: 1

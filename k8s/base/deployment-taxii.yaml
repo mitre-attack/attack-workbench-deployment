@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: attack-workbench-taxii
+  namespace: attack-workbench
+  labels:
+    app: taxii
+spec:
+  ports:
+  - port: 5002
+    targetPort: 5002
+    protocol: TCP
+  selector:
+    app: taxii
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taxii
+  namespace: attack-workbench
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taxii
+  template:
+    metadata:
+      labels:
+        app: taxii
+    spec:
+      containers:
+      - name: taxii
+        image: ghcr.io/mitre-attack/attack-workbench-taxii-server:latest
+        ports:
+        - containerPort: 5002
+        envFrom:
+        - configMapRef:
+            name: taxii-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
