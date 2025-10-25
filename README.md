@@ -40,11 +40,12 @@ docker compose -f compose.yaml -f compose.dev.yaml down
 
 **Note**: When building from source, you need the following three source repositories to be available as sibling directories to this deployment repository:
 
-- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/) 
-- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/) 
+- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/)
+- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/)
 - [attack-workbench-taxii-server](https://mitre-attack/attack-workbench-taxii-server/)
 
 The directory structure should look like this:
+
 ```bash
 .
 ├── attack-workbench-deployment
@@ -99,18 +100,21 @@ Each service has its own configuration directory:
 ## Quick Start
 
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/center-for-threat-informed-defense/attack-workbench-deployment.git
    cd attack-workbench-deployment
    ```
 
 2. Configure environment variables (optional):
+
    ```bash
    cp template.env .env
    # Edit .env with your preferred settings
    ```
 
 3. Deploy using pre-built images:
+
    ```bash
    docker compose up -d
    ```
@@ -118,6 +122,7 @@ Each service has its own configuration directory:
 4. Access the application at `http://localhost` (or your configured port)
 
 5. To include the TAXII server:
+
    ```bash
    docker compose --profile with-taxii up -d
    ```
@@ -142,7 +147,7 @@ docker compose logs -f
 
 # Show logs for a specific container
 docker compose logs frontend
-docker compose logs rest-api  
+docker compose logs rest-api
 docker compose logs database
 docker compose logs taxii
 ```
@@ -158,5 +163,6 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](./LICEN
 ## Support
 
 For issues and questions:
+
 - Check the [deployment repository issues](https://github.com/center-for-threat-informed-defense/attack-workbench-deployment/issues)
 - Refer to the main [ATT&CK Workbench documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
