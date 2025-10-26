@@ -43,7 +43,7 @@ services:
 
   database:
     container_name: attack-workbench-database
-    image: mongo:5
+    image: mongo:8
     ports:
       - "${ATTACKWB_DB_PORT:-27017}:${ATTACKWB_DB_PORT:-27017}"
     volumes:
