@@ -40,11 +40,12 @@ docker compose -f compose.yaml -f compose.dev.yaml down
 
 **Note**: When building from source, you need the following three source repositories to be available as sibling directories to this deployment repository:
 
-- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/) 
-- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/) 
+- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/)
+- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/)
 - [attack-workbench-taxii-server](https://mitre-attack/attack-workbench-taxii-server/)
 
 The directory structure should look like this:
+
 ```bash
 .
 ├── attack-workbench-deployment
@@ -55,7 +56,8 @@ The directory structure should look like this:
 
 ### Kubernetes
 
-For production deployments, Kubernetes manifests with Kustomize are available in the `k8s/` directory. See [k8s/README.md](k8s/README.md) for detailed instructions.
+For production deployments, Kubernetes manifests with Kustomize are available in the `k8s/` directory.
+See [k8s/README.md](k8s/README.md) for detailed instructions.
 
 ## Configuration
 
@@ -92,32 +94,80 @@ Available environment variables:
 
 Each service has its own configuration directory:
 
-- **Frontend**: `configs/frontend/` - The frontend container is an Nginx instance which serves the frontend SPA and reverse proxies requests to the backend REST API. We provide a basic `nginx.conf` template in the aforementioned directory that should get you started. Refer to the [frontend documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend) for further details on customizing the SPA.
-- **REST API**: `configs/rest-api/` - The backend REST API loads runtime configurations from environment variables, as well as from a JSON configuration file. Templates are provided in the aforementioned directory. Refer to the [REST API usage documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/blob/main/USAGE.md#configuration) for further details on customizing the backend.
-- **TAXII Server**: `configs/taxii/config/` - The TAXII server loads all runtime configuration parameters from a dotenv file. The specific filename of the dotenv file is specified by the `ATTACKWB_TAXII_ENV` environment variable. For example, a value of `dev` tells the TAXII server to load `dev.env`.
+#### Frontend
+
+**Default config files**: `configs/frontend/`
+
+The frontend container is an Nginx instance which serves the frontend SPA and reverse proxies requests to the backend REST API.
+We provide a basic `nginx.conf` template in the aforementioned directory that should get you started.
+Refer to the [frontend documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
+for further details on customizing the SPA.
+
+#### REST API
+
+> [!IMPORTANT]
+> The REST API service requires the `SESSION_SECRET` environment variable to be set in order to deploy.
+> Without it set, `docker compose up` will fail to start this required service.
+
+**Default config files**: `configs/rest-api/`
+
+The backend REST API loads runtime configurations from environment variables, as well as from a JSON configuration file.
+Templates are provided in the aforementioned directory.
+Refer to the [REST API usage documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/blob/main/USAGE.md#configuration)
+for further details on customizing the backend.
+
+#### TAXII Server
+
+**Default config files**: `configs/taxii/config/`
+
+The TAXII server loads all runtime configuration parameters from a dotenv file.
+The specific filename of the dotenv file is specified by the `ATTACKWB_TAXII_ENV` environment variable.
+For example, a value of `dev` tells the TAXII server to load `dev.env`.
 
 ## Quick Start
 
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/center-for-threat-informed-defense/attack-workbench-deployment.git
    cd attack-workbench-deployment
    ```
 
 2. Configure environment variables (optional):
+
    ```bash
    cp template.env .env
    # Edit .env with your preferred settings
    ```
 
-3. Deploy using pre-built images:
+3. Configure REST API environment variables (required):
+
+   ```bash
+   cp configs/rest-api/template.env configs/rest-api/.env
+   ```
+
+   Generate a secure random secret
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+   ```
+
+   Set the above secret in `configs/rest-api/.env`
+
+   ```bash
+   SESSION_SECRET=<value from above command>
+   ```
+
+4. Deploy using pre-built images:
+
    ```bash
    docker compose up -d
    ```
 
-4. Access the application at `http://localhost` (or your configured port)
+5. Access the application at `http://localhost` (or your configured port)
 
-5. To include the TAXII server:
+6. To include the TAXII server:
+
    ```bash
    docker compose --profile with-taxii up -d
    ```
@@ -142,7 +192,7 @@ docker compose logs -f
 
 # Show logs for a specific container
 docker compose logs frontend
-docker compose logs rest-api  
+docker compose logs rest-api
 docker compose logs database
 docker compose logs taxii
 ```
@@ -158,5 +208,6 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](./LICEN
 ## Support
 
 For issues and questions:
+
 - Check the [deployment repository issues](https://github.com/center-for-threat-informed-defense/attack-workbench-deployment/issues)
 - Refer to the main [ATT&CK Workbench documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)

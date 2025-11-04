@@ -2,7 +2,7 @@
 # - This file augments the deployment of the ATT&CK Workbench by configuring the REST API container
 # - with an additional certificate.
 # - This is recommended for deployments where the REST API container is behind a firewall that performs
-#   SSL inspection. The additional certificate allows the REST API collection management to retrieve 
+#   SSL inspection. The additional certificate allows the REST API collection management to retrieve
 #   Collection Indexes and Collection bundles without receiving a self-signed certificate error.
 
 # Usage
