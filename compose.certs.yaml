@@ -15,7 +15,6 @@
 # Running docker compose at the command line:
 # docker compose -f compose.yaml -f compose.certs.yaml up
 
-version: "3.9"
 services:
   rest-api:
     volumes:
