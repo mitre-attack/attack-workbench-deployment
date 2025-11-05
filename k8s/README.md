@@ -1,22 +1,23 @@
+# ATT&CK Workbench Kubernetes Deployment
+
 <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 15px; margin-bottom: 20px;">
   <strong>⚠️ Work in Progress</strong><br>
   These Kubernetes templates are a work in progress and are not guaranteed to work out of the box. Please review and customize all configurations before deploying to your environment.
 </div>
-
-# ATT&CK Workbench Kubernetes Deployment
 
 This directory contains Kubernetes manifests for deploying ATT&CK Workbench using Kustomize.
 
 ## Prerequisites
 
 - Kubernetes cluster
-- `kubectl` configured to access your cluster  
+- `kubectl` configured to access your cluster
 - Kustomize (built into most versions of `kubectl`)
 - Persistent storage class available in your cluster
 
 ## Architecture
 
 The deployment consists of:
+
 - **Frontend**: Angular SPA served by Nginx
 - **REST API**: Express.js API server
 - **TAXII Server**: Nest.js TAXII 2.1 compliant server (optional)
@@ -40,7 +41,7 @@ kubectl get svc -n attack-workbench dev-attack-workbench-frontend
 ### Production Deployment
 
 ```bash
-# Deploy to production environment  
+# Deploy to production environment
 kubectl apply -k k8s/overlays/prod
 
 # Check deployment status
@@ -84,7 +85,7 @@ To customize the deployment for your environment:
 # Frontend
 kubectl port-forward -n attack-workbench svc/dev-attack-workbench-frontend 8080:80
 
-# REST API  
+# REST API
 kubectl port-forward -n attack-workbench svc/dev-attack-workbench-rest-api 3000:3000
 
 # TAXII Server
@@ -149,7 +150,7 @@ kubectl scale deployment prod-rest-api --replicas=3 -n attack-workbench
 # Frontend logs
 kubectl logs -l app=frontend -n attack-workbench
 
-# REST API logs  
+# REST API logs
 kubectl logs -l app=rest-api -n attack-workbench
 
 # Database logs
