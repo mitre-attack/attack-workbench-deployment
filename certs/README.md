@@ -2,7 +2,8 @@
 
 ## Overview
 
-In certain deployment environments—particularly those with SSL inspection or deep packet inspection proxies such as **ZScaler**—the ATT&CK Workbench may need to trust custom Certificate Authorities (CA) in order to retrieve data from external services like remote collection indexes or STIX bundles.
+In certain deployment environments (particularly those with SSL inspection or deep packet inspection proxies such as **ZScaler**)
+the ATT&CK Workbench may need to trust custom Certificate Authorities (CA) in order to retrieve data from external services like remote collection indexes or STIX bundles.
 
 This guide explains how to add your own PKI certificate to the Workbench deployment.
 
@@ -12,7 +13,7 @@ This guide explains how to add your own PKI certificate to the Workbench deploym
 
 Copy your `.pem` or `.crt` file into the `certs/` directory of this repository:
 
-````
+````sh
 attack-workbench-deployment/certs/foobar.pem
 ````
 
@@ -60,7 +61,7 @@ This will mount your certificate into the container and configure the Node.js en
 
 ## Example Directory Structure
 
-```
+```sh
 attack-workbench-deployment/
 ├── compose.yaml
 ├── compose.certs.yaml
