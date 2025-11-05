@@ -4,11 +4,11 @@ This document outlines the version compatibility between different components of
 
 ## Compatibility Matrix
 
-| Workbench Frontend Version | REST API Version | TAXII Server Version | ATT&CK Specification Version | Notes                                                                 |
-|----------------------------|------------------|-----------------------|------------------------------|-----------------------------------------------------------------------|
-| 3.x                      | 3.x            | 1.x                   | 3.2.0                        | All 3.x versions are pinned to ATT&CK Spec v3.2.0.                 |
-| 4.x (upcoming)             | 4.x (upcoming)   | TBD                   | 3.3.0                        | Planned major release to align with ATT&CK Spec v3.3.0.              |
-| 5.x (future)             | 5.x (future)   | TBD                   | 4.0.0                        | Planned major release to align with ATT&CK Spec v4.0.0.              |
+| Workbench Frontend Version | REST API Version | TAXII Server Version  | ATT&CK Specification Version | Notes                                                   |
+|----------------------------|------------------|-----------------------|------------------------------|---------------------------------------------------------|
+| 3.x                        | 3.x              | 1.x                   | 3.2.0                        | All 3.x versions are pinned to ATT&CK Spec v3.2.0.      |
+| 4.x (upcoming)             | 4.x (upcoming)   | TBD                   | 3.3.0                        | Planned major release to align with ATT&CK Spec v3.3.0. |
+| 5.x (future)               | 5.x (future)     | TBD                   | 4.0.0                        | Planned major release to align with ATT&CK Spec v4.0.0. |
 
 > **Note:** The Workbench frontend and REST API are tightly coupled by **major version**. Minor and patch versions may diverge but remain interoperable.
 
@@ -53,6 +53,7 @@ This document outlines the version compatibility between different components of
 ## Contributing to Compatibility
 
 To propose compatibility updates or report mismatches:
+
 - [Open an issue](https://github.com/mitre-attack/attack-workbench-deployment/issues)
 - Or reach out to the maintainers via [attack@mitre.org](mailto:attack@mitre.org)
 
