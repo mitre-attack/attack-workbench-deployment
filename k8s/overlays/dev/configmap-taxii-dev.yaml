@@ -13,7 +13,7 @@ data:
   TAXII_CORS_ENABLED: "true"
   TAXII_MAX_CONTENT_LENGTH: "0"
   CERTBOT_LE_FQDN: "localhost"
-  CERBOT_LE_EMAIL: "dev@localhost"
+  CERTBOT_LE_EMAIL: "dev@localhost"
   CERTBOT_LE_ACME_SERVER: "https://acme-staging-v02.api.letsencrypt.org/directory"
   CERTBOT_LE_RSA_KEY_SIZE: "2048"
   TAXII_API_ROOT_PATH: "api"
