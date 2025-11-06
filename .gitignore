@@ -1,4 +1,8 @@
+local-resources/
 database-backup/
+instances/
+
+# used by the mongo migration script
 compose.yaml.backup
 
 # Macos files
