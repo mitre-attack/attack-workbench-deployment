@@ -39,7 +39,6 @@ The default semantic-release configuration includes:
 2. `@semantic-release/release-notes-generator` - Generates changelog
 3. `@semantic-release/npm` - Updates package.json and publishes to registry
 4. `@semantic-release/github` - Creates GitHub releases and tags
-5. `@semantic-release/exec` - Executes Docker build and push commands
 
 ## Branch Strategy
 
