@@ -6,8 +6,6 @@ Optionally, you can deploy a "sidecar service" that makes your Workbench data av
 
 ## Quick Start
 
-### Automated Setup (Recommended)
-
 Use the interactive setup script to quickly create and deploy a custom Workbench instance:
 
 ```bash
