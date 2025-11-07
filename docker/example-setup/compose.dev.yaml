@@ -3,11 +3,52 @@ services:
   frontend:
     image: attack-workbench-frontend
     build: ../../../attack-workbench-frontend
+    develop:
+      watch:
+        # Sync source files for hot-reload
+        - action: sync
+          path: ../../../attack-workbench-frontend/src
+          target: /app/src
+          ignore:
+            - node_modules/
+        # Rebuild on package.json changes
+        - action: rebuild
+          path: ../../../attack-workbench-frontend/package.json
 
   rest-api:
     image: attack-workbench-rest-api
     build: ../../../attack-workbench-rest-api
+    develop:
+      watch:
+        # Sync app source files
+        - action: sync
+          path: ../../../attack-workbench-rest-api/app
+          target: /usr/src/app/app
+          ignore:
+            - node_modules/
+        # Restart on config changes
+        - action: sync+restart
+          path: ../../../attack-workbench-rest-api/resources
+          target: /usr/src/app/resources
+        # Rebuild on package.json changes
+        - action: rebuild
+          path: ../../../attack-workbench-rest-api/package.json
 
   taxii:
     image: attack-workbench-taxii-server
     build: ../../../attack-workbench-taxii-server
+    develop:
+      watch:
+        # Sync source files
+        - action: sync
+          path: ../../../attack-workbench-taxii-server/taxii
+          target: /app/taxii
+          ignore:
+            - node_modules/
+        # Sync config files and restart
+        - action: sync+restart
+          path: ../../../attack-workbench-taxii-server/config
+          target: /app/config
+        # Rebuild on package.json changes
+        - action: rebuild
+          path: ../../../attack-workbench-taxii-server/package.json
