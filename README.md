@@ -17,6 +17,8 @@ cd attack-workbench-deployment
 ./setup-workbench.sh
 ```
 
+**NOTE**: Running this part doesn't work yet...
+
 Or run directly without cloning:
 
 ```bash
