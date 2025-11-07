@@ -6,7 +6,42 @@ Optionally, you can deploy a "sidecar service" that makes your Workbench data av
 
 ## Quick Start
 
-### Deploy with Docker Compose
+### Automated Setup (Recommended)
+
+Use the interactive setup script to quickly create and deploy a custom Workbench instance:
+
+```bash
+# Clone and run setup script
+git clone https://github.com/mitre-attack/attack-workbench-deployment.git
+cd attack-workbench-deployment
+./setup-workbench.sh
+```
+
+Or run directly without cloning:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mitre-attack/attack-workbench-deployment/main/setup-workbench.sh | bash
+```
+
+After running the script, deploy with:
+
+```bash
+cd instances/your-instance-name
+docker compose up -d
+```
+
+For developer mode deployments, use:
+
+```bash
+cd instances/your-instance-name
+docker compose up -d --build
+```
+
+Access Workbench at <http://localhost>
+
+### Manual Setup
+
+If you prefer to set up manually or need custom configuration:
 
 ```bash
 # Clone this repository
