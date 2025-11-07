@@ -362,7 +362,8 @@ add_taxii_to_compose() {
 
     # Insert TAXII service before the "volumes:" section
     sed '/^volumes:/,$d' "$compose_file" > "$temp_file"
-    cat "$taxii_template" >> "$temp_file"
+    # Extract only the service definition, skipping the "services:" header
+    sed -n '/^services:/,${/^services:/!p;}' "$taxii_template" >> "$temp_file"
     echo "" >> "$temp_file"
     sed -n '/^volumes:/,$p' "$compose_file" >> "$temp_file"
     mv "$temp_file" "$compose_file"

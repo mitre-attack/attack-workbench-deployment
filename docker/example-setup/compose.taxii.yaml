@@ -1,3 +1,5 @@
+services:
+
   taxii:
     container_name: attack-workbench-taxii-server
     image: ghcr.io/mitre-attack/attack-workbench-taxii-server:${ATTACKWB_TAXII_VERSION:-latest}
