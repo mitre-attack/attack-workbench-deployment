@@ -1,0 +1,17 @@
+  taxii:
+    container_name: attack-workbench-taxii-server
+    image: ghcr.io/mitre-attack/attack-workbench-taxii-server:${ATTACKWB_TAXII_VERSION:-latest}
+    depends_on:
+      - rest-api
+    ports:
+      - "${ATTACKWB_TAXII_HTTP_PORT:-5002}:${ATTACKWB_TAXII_HTTP_PORT:-5002}"
+    volumes:
+      - "${ATTACKWB_TAXII_CONFIG_DIR:-./configs/taxii/config}:/app/config:ro"
+    environment:
+      - TAXII_ENV=${ATTACKWB_TAXII_ENV:-dev}
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
