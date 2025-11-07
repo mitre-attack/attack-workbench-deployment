@@ -6,10 +6,10 @@ services:
     depends_on:
       - rest-api
     ports:
-      - "${ATTACKWB_FRONTEND_HTTP_PORT:-80}:${ATTACKWB_FRONTEND_HTTP_PORT:-80}"
-      - "${ATTACKWB_FRONTEND_HTTPS_PORT:-443}:${ATTACKWB_FRONTEND_HTTPS_PORT:-443}"
+      - "${ATTACKWB_FRONTEND_HTTP_PORT:-80}:80"
+      - "${ATTACKWB_FRONTEND_HTTPS_PORT:-443}:443"
     volumes:
-      - ./configs/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      - "${ATTACKWB_FRONTEND_NGINX_CONFIG_FILE:-./configs/frontend/nginx.conf}:/etc/nginx/nginx.conf:ro"
       - "${ATTACKWB_FRONTEND_CERTS_PATH:-./certs}:/etc/nginx/certs:ro"
     restart: unless-stopped
     logging:
@@ -22,13 +22,13 @@ services:
     container_name: attack-workbench-rest-api
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:${ATTACKWB_RESTAPI_VERSION:-latest}
     depends_on:
-      - database
+      - mongodb
     ports:
       - "${ATTACKWB_RESTAPI_HTTP_PORT:-3000}:${ATTACKWB_RESTAPI_HTTP_PORT:-3000}"
     volumes:
-      - ./configs/rest-api/rest-api-service-config.json:/usr/src/app/resources/rest-api-service-config.json:ro
+      - "${ATTACKWB_RESTAPI_CONFIG_FILE:-./configs/rest-api/rest-api-service-config.json}:/usr/src/app/resources/rest-api-service-config.json:ro"
     env_file:
-      - ./configs/rest-api/.env
+      - "${ATTACKWB_RESTAPI_ENV_FILE:-./configs/rest-api/.env}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health/ping"]
@@ -41,11 +41,11 @@ services:
         max-size: "10m"
         max-file: "5"
 
-  database:
+  mongodb:
     container_name: attack-workbench-database
     image: mongo:8
     ports:
-      - "${ATTACKWB_DB_PORT:-27017}:${ATTACKWB_DB_PORT:-27017}"
+      - "127.0.0.1:${ATTACKWB_DB_PORT:-27017}:${ATTACKWB_DB_PORT:-27017}"
     volumes:
       - workspace-data:/data/db
       - ./database-backup:/dump
@@ -69,10 +69,9 @@ services:
     ports:
       - "${ATTACKWB_TAXII_HTTP_PORT:-5002}:${ATTACKWB_TAXII_HTTP_PORT:-5002}"
     volumes:
-      - ./configs/taxii/config:/app/config:ro
+      - "${ATTACKWB_TAXII_CONFIG_DIR:-./configs/taxii/config}:/app/config:ro"
     environment:
       - TAXII_ENV=${ATTACKWB_TAXII_ENV:-dev}
-      - TAXII_HYDRATE_ON_BOOT=true
     profiles:
       - with-taxii
     restart: unless-stopped
