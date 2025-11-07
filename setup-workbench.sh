@@ -168,9 +168,13 @@ update_env_file() {
     local value="$3"
 
     if grep -q "^${key}=" "$env_file"; then
-        sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+        local tmp
+        tmp="$(mktemp /tmp/env.XXXXXX)"
+        sed "s|^${key}=.*|${key}=${value}|" "$env_file" > "$tmp" && mv "$tmp" "$env_file"
     elif grep -q "^#${key}=" "$env_file"; then
-        sed -i "s|^#${key}=.*|${key}=${value}|" "$env_file"
+        local tmp
+        tmp="$(mktemp /tmp/env.XXXXXX)"
+        sed "s|^#${key}=.*|${key}=${value}|" "$env_file" > "$tmp" && mv "$tmp" "$env_file"
     else
         echo "${key}=${value}" >> "$env_file"
     fi
