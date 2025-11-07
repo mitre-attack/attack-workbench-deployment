@@ -41,38 +41,6 @@ docker compose up -d --build
 
 Access Workbench at <http://localhost>
 
-### Manual Setup
-
-If you prefer to set up manually or need custom configuration:
-
-```bash
-# Clone this repository
-git clone https://github.com/mitre-attack/attack-workbench-deployment.git
-cd attack-workbench-deployment
-
-# Copy docker compose template (git-ignored)
-mkdir -p instances/my-workbench
-cp -r docker/example-setup/* instances/my-workbench/
-
-# Configure environment
-cd instances/my-workbench
-mv template.env .env
-mv configs/rest-api/template.env configs/rest-api/.env
-
-# edit the following files as needed
-#   <git-repo>instances/my-workbench/.env
-#   configs/rest-api/.env
-#   configs/rest-api/rest-api-service-config.json
-
-# Deploy
-docker compose up -d
-
-# (Optional) Deploy with TAXII server
-docker compose --profile with-taxii up -d
-```
-
-Access Workbench at <http://localhost>
-
 Full variable descriptions and examples are available in [docs/configuration](docs/configuration.md).
 
 For source builds or TAXII setup, see [docs/deployment](docs/deployment.md).
