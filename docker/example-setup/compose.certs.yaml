@@ -18,6 +18,6 @@
 services:
   rest-api:
     volumes:
-      - .${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
+      - ${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
     environment:
       - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME:-custom-certs.pem}
