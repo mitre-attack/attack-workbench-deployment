@@ -1,6 +1,7 @@
 local-resources/
 database-backup/
 instances/
+certs/
 
 # used by the mongo migration script
 compose.yaml.backup
