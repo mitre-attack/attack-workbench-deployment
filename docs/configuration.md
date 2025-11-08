@@ -85,6 +85,13 @@ Templates are provided in the aforementioned directory.
 Refer to the [REST API usage documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/blob/main/USAGE.md#configuration)
 for further details on customizing the backend.
 
+**Important**: For production deployments, set the following environment variables in your `.env` file to ensure persistent secrets across server restarts:
+
+- `SESSION_SECRET` - Secret used to sign session cookies
+- `MONGOSTORE_CRYPTO_SECRET` - Secret used to encrypt session data in MongoDB
+
+Generate secure secrets using: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
+
 ### TAXII Server
 
 **Config files**: [configs/taxii/config/](../docker/example-setup/configs/taxii/config/)
