@@ -1,7 +1,6 @@
 services:
 
   frontend:
-    container_name: attack-workbench-frontend
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:${ATTACKWB_FRONTEND_VERSION:-latest}
     depends_on:
       - rest-api
@@ -19,12 +18,11 @@ services:
         max-file: "5"
 
   rest-api:
-    container_name: attack-workbench-rest-api
     image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:${ATTACKWB_RESTAPI_VERSION:-latest}
     depends_on:
       - mongodb
     ports:
-      - "${ATTACKWB_RESTAPI_HTTP_PORT:-3000}:${ATTACKWB_RESTAPI_HTTP_PORT:-3000}"
+      - "${ATTACKWB_RESTAPI_HTTP_PORT:-3000}:3000"
     volumes:
       - "${ATTACKWB_RESTAPI_CONFIG_FILE:-./configs/rest-api/rest-api-service-config.json}:/usr/src/app/resources/rest-api-service-config.json:ro"
     env_file:
@@ -42,10 +40,9 @@ services:
         max-file: "5"
 
   mongodb:
-    container_name: attack-workbench-database
     image: mongo:8
     ports:
-      - "127.0.0.1:${ATTACKWB_DB_PORT:-27017}:${ATTACKWB_DB_PORT:-27017}"
+      - "127.0.0.1:${ATTACKWB_DB_PORT:-27017}:27017"
     volumes:
       - workspace-data:/data/db
       - ./database-backup:/dump
