@@ -29,7 +29,7 @@ readonly REPO_FRONTEND="attack-workbench-frontend"
 readonly REPO_REST_API="attack-workbench-rest-api"
 readonly REPO_TAXII="attack-workbench-taxii-server"
 
-readonly DB_URL_DOCKER="mongodb://attack-workbench-database/attack-workspace"
+readonly DB_URL_DOCKER="mongodb://mongodb/attack-workspace"
 readonly DB_URL_LOCAL="mongodb://localhost:27017/attack-workspace"
 
 #===============================================================================
