@@ -5,7 +5,7 @@ services:
     depends_on:
       - rest-api
     ports:
-      - "${ATTACKWB_TAXII_HTTP_PORT:-5002}:8000"
+      - "${ATTACKWB_TAXII_HTTP_PORT:-8000}:8000"
     volumes:
       - "${ATTACKWB_TAXII_CONFIG_DIR:-./configs/taxii/config}:/app/config:ro"
     environment:
