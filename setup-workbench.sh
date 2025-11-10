@@ -98,12 +98,11 @@ require_directory() {
 #===============================================================================
 
 # Prompt for yes/no answer with validation
-# Usage: prompt_yes_no "Question?" "Y" result_var
-# Args: $1=question, $2=default (Y/N), $3=variable name to store result
+# Usage: prompt_yes_no "Question?" "Y"
+# Args: $1=question, $2=default (Y/N)
 prompt_yes_no() {
     local question="$1"
     local default="$2"
-    # local -n result="$3"
     PROMPT_YES_NO_RESULT=""
 
     while true; do
@@ -120,11 +119,9 @@ prompt_yes_no() {
 }
 
 # Prompt for menu selection with validation
-# Usage: prompt_menu result_var "option1" "option2" "option3"
-# Args: $1=variable name to store result, remaining args=menu options
+# Usage: prompt_menu "option1" "option2" "option3"
+# Args: menu options
 prompt_menu() {
-    # local -n result="$1"
-    # shift
     local -a options=("$@")
     local num_options=${#options[@]}
 
@@ -147,10 +144,9 @@ prompt_menu() {
 }
 
 # Prompt for non-empty string with validation
-# Usage: prompt_non_empty "Question" result_var
+# Usage: prompt_non_empty "Question"
 prompt_non_empty() {
     local question="$1"
-    # local -n result="$2"
     PROMPT_NON_EMPTY_RESULT=""
 
     while true; do
@@ -210,7 +206,6 @@ get_repo_url() {
 
 # Prompt for and validate instance name
 get_instance_name() {
-    # local -n name_ref="$1"
     GET_INSTANCE_NAME_NAME_REF=""
 
     read -p "Enter instance name [my-workbench]: " GET_INSTANCE_NAME_NAME_REF
@@ -273,7 +268,6 @@ create_instance() {
 
 # Configure database connection and return the selected DATABASE_URL
 configure_database() {
-    # local -n db_url_ref="$1"
     CONFIGURE_DATABASE_DB_URL_REF=""
 
     echo ""
@@ -334,8 +328,6 @@ setup_environment_files() {
 
 # Configure custom SSL certificates for REST API
 configure_custom_certificates() {
-    # local -n host_certs_ref="$1"
-    # local -n certs_filename_ref="$2"
     CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=""
     CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=""
 
