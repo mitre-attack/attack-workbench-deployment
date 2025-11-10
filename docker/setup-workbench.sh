@@ -394,7 +394,7 @@ verify_dev_mode_repos() {
     fi
 
     if [[ ${#missing_repos[@]} -gt 0 ]]; then
-        error "Missing required repositories:"
+        warning "Missing required repositories:"
         for repo in "${missing_repos[@]}"; do
             echo "  - $repo"
         done
@@ -406,11 +406,10 @@ verify_dev_mode_repos() {
         for repo in "${missing_repos[@]}"; do
             echo "  git clone $(get_repo_url "$repo") $parent_dir/$repo"
         done
-        echo ""
-        exit 1
+    else
+        success "All required repositories found!"
     fi
-
-    success "All required repositories found!"
+    echo ""
 }
 
 # Display expected directory structure for developer mode
@@ -628,7 +627,8 @@ show_deployment_instructions() {
     fi
     echo ""
 
-    info "After deployment, access your Workbench at: http://localhost"
+    info "After deployment, access your Workbench at:"
+    echo "  http://localhost"
     echo ""
 
     info "For more information, see:"
