@@ -103,14 +103,15 @@ require_directory() {
 prompt_yes_no() {
     local question="$1"
     local default="$2"
-    local -n result="$3"
+    # local -n result="$3"
+    PROMPT_YES_NO_RESULT=""
 
     while true; do
         read -p "$question [y/N] " -r answer
         answer=${answer:-$default}
 
         if [[ $answer =~ ^[YyNn]$ ]]; then
-            result="$answer"
+            PROMPT_YES_NO_RESULT="$answer"
             break
         else
             error "Invalid option. Please enter 'y' for yes or 'n' for no."
@@ -122,11 +123,12 @@ prompt_yes_no() {
 # Usage: prompt_menu result_var "option1" "option2" "option3"
 # Args: $1=variable name to store result, remaining args=menu options
 prompt_menu() {
-    local -n result="$1"
-    shift
+    # local -n result="$1"
+    # shift
     local -a options=("$@")
     local num_options=${#options[@]}
 
+    PROMPT_MENU_RESULT=""
     while true; do
         for i in "${!options[@]}"; do
             echo "$((i + 1))) ${options[$i]}"
@@ -135,7 +137,7 @@ prompt_menu() {
         read -p "Select option [1-$num_options]: " -r choice
 
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$num_options" ]; then
-            result="$choice"
+            PROMPT_MENU_RESULT="$choice"
             break
         else
             error "Invalid option. Please select 1-$num_options."
@@ -148,11 +150,12 @@ prompt_menu() {
 # Usage: prompt_non_empty "Question" result_var
 prompt_non_empty() {
     local question="$1"
-    local -n result="$2"
+    # local -n result="$2"
+    PROMPT_NON_EMPTY_RESULT=""
 
     while true; do
-        read -p "$question " result
-        if [[ -n "$result" ]]; then
+        read -p "$question " PROMPT_NON_EMPTY_RESULT
+        if [[ -n "$PROMPT_NON_EMPTY_RESULT" ]]; then
             break
         else
             error "Input cannot be empty"
@@ -207,13 +210,14 @@ get_repo_url() {
 
 # Prompt for and validate instance name
 get_instance_name() {
-    local -n name_ref="$1"
+    # local -n name_ref="$1"
+    GET_INSTANCE_NAME_NAME_REF=""
 
-    read -p "Enter instance name [my-workbench]: " name_ref
-    name_ref=${name_ref:-my-workbench}
+    read -p "Enter instance name [my-workbench]: " GET_INSTANCE_NAME_NAME_REF
+    GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-my-workbench}
 
     # Validate instance name
-    if [[ ! "$name_ref" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    if [[ ! "$GET_INSTANCE_NAME_NAME_REF" =~ ^[a-zA-Z0-9_-]+$ ]]; then
         error "Instance name can only contain letters, numbers, hyphens, and underscores"
         exit 1
     fi
@@ -231,8 +235,8 @@ handle_existing_instance() {
     warning "Instance '$instance_name' already exists at $instance_dir"
     echo ""
 
-    local overwrite=""
-    prompt_yes_no "Would you like to overwrite it?" "N" overwrite
+    prompt_yes_no "Would you like to overwrite it?" "N"
+    local overwrite="$PROMPT_YES_NO_RESULT"
 
     if [[ ! $overwrite =~ ^[Yy]$ ]]; then
         error "Aborted"
@@ -269,31 +273,33 @@ create_instance() {
 
 # Configure database connection and return the selected DATABASE_URL
 configure_database() {
-    local -n db_url_ref="$1"
+    # local -n db_url_ref="$1"
+    CONFIGURE_DATABASE_DB_URL_REF=""
 
     echo ""
     info "Configure MongoDB connection:"
     echo ""
 
-    local db_choice=""
-    prompt_menu db_choice \
+    prompt_menu \
         "Docker setup ($DB_URL_DOCKER)" \
         "Local MongoDB ($DB_URL_LOCAL)" \
         "Custom connection string"
+    local db_choice="$PROMPT_MENU_RESULT"
 
     case $db_choice in
         1)
-            db_url_ref="$DB_URL_DOCKER"
-            info "Using Docker setup: $db_url_ref"
+            CONFIGURE_DATABASE_DB_URL_REF="$DB_URL_DOCKER"
+            info "Using Docker setup: $CONFIGURE_DATABASE_DB_URL_REF"
             ;;
         2)
-            db_url_ref="$DB_URL_LOCAL"
-            info "Using local MongoDB: $db_url_ref"
+            CONFIGURE_DATABASE_DB_URL_REF="$DB_URL_LOCAL"
+            info "Using local MongoDB: $CONFIGURE_DATABASE_DB_URL_REF"
             ;;
         3)
             echo ""
-            prompt_non_empty "Enter MongoDB connection string:" db_url_ref
-            info "Using custom connection: $db_url_ref"
+            prompt_non_empty "Enter MongoDB connection string:"
+            CONFIGURE_DATABASE_DB_URL_REF="$PROMPT_NON_EMPTY_RESULT"
+            info "Using custom connection: $CONFIGURE_DATABASE_DB_URL_REF"
             ;;
     esac
     echo ""
@@ -328,8 +334,10 @@ setup_environment_files() {
 
 # Configure custom SSL certificates for REST API
 configure_custom_certificates() {
-    local -n host_certs_ref="$1"
-    local -n certs_filename_ref="$2"
+    # local -n host_certs_ref="$1"
+    # local -n certs_filename_ref="$2"
+    CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=""
+    CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=""
 
     echo ""
     info "Custom SSL certificates allow the REST API to trust additional CA certificates."
@@ -337,18 +345,18 @@ configure_custom_certificates() {
     echo ""
 
     read -p "Enter host certificates path [./certs]: " user_certs_path
-    host_certs_ref=${user_certs_path:-./certs}
+    CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=${user_certs_path:-./certs}
 
     read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
-    certs_filename_ref=${user_certs_filename:-custom-certs.pem}
+    CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
 
-    info "Using certificates from: $host_certs_ref/$certs_filename_ref"
+    info "Using certificates from: $CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF/$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
     echo ""
 
     # Add custom cert configuration to .env
     local env_file="$INSTANCE_DIR/.env"
-    update_env_file "$env_file" "HOST_CERTS_PATH" "$host_certs_ref"
-    update_env_file "$env_file" "CERTS_FILENAME" "$certs_filename_ref"
+    update_env_file "$env_file" "HOST_CERTS_PATH" "$CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF"
+    update_env_file "$env_file" "CERTS_FILENAME" "$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
     success "Added certificate configuration to $env_file"
 }
 
@@ -670,7 +678,8 @@ else
     fi
 
     echo ""
-    prompt_yes_no "Would you like to clone the repository?" "Y" CLONE_REPO
+    prompt_yes_no "Would you like to clone the repository?" "Y"
+    CLONE_REPO="$PROMPT_YES_NO_RESULT"
 
     if [[ $CLONE_REPO =~ ^[Yy]$ ]]; then
         info "Cloning repository from $DEPLOYMENT_REPO_URL..."
@@ -720,8 +729,8 @@ echo ""
 info "Setting up your Workbench instance..."
 echo ""
 
-INSTANCE_NAME=""
-get_instance_name INSTANCE_NAME
+get_instance_name
+INSTANCE_NAME="$GET_INSTANCE_NAME_NAME_REF"
 INSTANCE_DIR="$DEPLOYMENT_DIR/instances/$INSTANCE_NAME"
 
 handle_existing_instance "$INSTANCE_DIR" "$INSTANCE_NAME"
@@ -735,8 +744,9 @@ echo ""
 info "Configuring deployment options..."
 echo ""
 
-ENABLE_TAXII=""
-prompt_yes_no "Do you want to deploy with the TAXII server?" "N" ENABLE_TAXII
+
+prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
+ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
 
 if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     # Remove TAXII configs if not needed
@@ -750,8 +760,8 @@ fi
 #---------------------------------------
 
 echo ""
-DATABASE_URL=""
-configure_database DATABASE_URL
+configure_database
+DATABASE_URL="$CONFIGURE_DATABASE_DB_URL_REF"
 setup_environment_files "$DATABASE_URL"
 
 if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
@@ -766,17 +776,20 @@ echo ""
 # Additional Options
 #---------------------------------------
 
-DEV_MODE=""
-prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N" DEV_MODE
 
-ENABLE_CUSTOM_CERTS=""
-prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N" ENABLE_CUSTOM_CERTS
+prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
+DEV_MODE="$PROMPT_YES_NO_RESULT"
+
+prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
+ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
 
 HOST_CERTS_PATH="./certs"
 CERTS_FILENAME="custom-certs.pem"
 
 if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
-    configure_custom_certificates HOST_CERTS_PATH CERTS_FILENAME
+    configure_custom_certificates
+    HOST_CERTS_PATH="$CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF"
+    CERTS_FILENAME="$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
 fi
 
 #---------------------------------------
