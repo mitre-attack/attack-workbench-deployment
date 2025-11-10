@@ -4,13 +4,13 @@ This repository contains deployment files for the ATT&CK Workbench, a web applic
 It is composed of a frontend Single Page App (SPA), a backend REST API, and a database.
 Optionally, you can deploy a "sidecar service" that makes your Workbench data available over a TAXII 2.1 API.
 
-## Quick Start
+## Docker Setup
 
-To quickly create and deploy a custom Workbench instance using Docker and Compose use the interactive setup script in the `docker/` directory.
+To quickly create and deploy a custom Workbench instance using Docker Compose use the interactive setup script in the `docker/` directory.
 
 See [docker/README](docker/README.md) for detailed instructions.
 
-## Kubernetes
+## Kubernetes Setup
 
 For production deployments, Kubernetes manifests with Kustomize are available in the `k8s/` directory.
 

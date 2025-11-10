@@ -5,21 +5,19 @@ Use the interactive setup script `setup-workbench.sh` to quickly create and depl
 ```bash
 # Clone and run setup script
 git clone https://github.com/mitre-attack/attack-workbench-deployment.git
-cd attack-workbench-deployment
-./docker/setup-workbench.sh
+cd attack-workbench-deployment/docker/
+./setup-workbench.sh
 ```
 
 After running the script, deploy with:
 
 ```bash
-cd instances/your-instance-name
+cd ../instances/your-instance-name
+
+# deploy with docker compose
 docker compose up -d
-```
 
-For developer mode deployments, use:
-
-```bash
-cd instances/your-instance-name
+# or deploy in development mode
 docker compose up -d --build
 ```
 
