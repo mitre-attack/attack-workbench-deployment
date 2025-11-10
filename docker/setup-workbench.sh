@@ -601,7 +601,12 @@ show_certificate_info() {
     echo "  Filename: $certs_filename"
     echo ""
     warning "Make sure to place your certificate file at:"
-    echo "  $instance_dir/$host_certs_path/$certs_filename"
+    if [[ "$host_certs_path" = ./* ]] || [[ "$host_certs_path" = ../* ]]; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        echo "  $instance_dir/$host_certs_path/$certs_filename"
+    else
+        echo "  $host_certs_path/$certs_filename"
+    fi
     echo ""
 }
 
@@ -650,8 +655,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOYMENT_DIR=""
 
 # Check if we're already in the deployment repo
-if [[ -f "$SCRIPT_DIR/docker/example-setup/compose.yaml" ]]; then
-    DEPLOYMENT_DIR="$SCRIPT_DIR"
+if [[ -f "$SCRIPT_DIR/example-setup/compose.yaml" ]]; then
+    DEPLOYMENT_DIR="$(dirname $SCRIPT_DIR)"
     info "Running from deployment repository: $DEPLOYMENT_DIR"
 elif [[ -d "$SCRIPT_DIR/attack-workbench-deployment" ]]; then
     DEPLOYMENT_DIR="$SCRIPT_DIR/attack-workbench-deployment"
