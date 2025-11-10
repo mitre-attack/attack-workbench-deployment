@@ -141,6 +141,8 @@ prompt_menu() {
             echo ""
         fi
     done
+
+    echo ""
 }
 
 # Prompt for non-empty string with validation
@@ -240,6 +242,7 @@ handle_existing_instance() {
 
     warning "Removing existing instance directory..."
     rm -rf "$instance_dir"
+    echo ""
 }
 
 # Create instance directory and copy template files
@@ -249,6 +252,7 @@ create_instance() {
     local source_dir="$deployment_dir/docker/example-setup"
 
     info "Creating instance directory: $instance_dir"
+    echo ""
     mkdir -p "$instance_dir"
 
     info "Copying template files..."
@@ -260,6 +264,7 @@ create_instance() {
         ! -path "$source_dir" \
         -exec cp -r {} "$instance_dir/" \;
     success "Template files copied"
+    echo ""
 }
 
 #===============================================================================
@@ -270,7 +275,7 @@ create_instance() {
 configure_database() {
     CONFIGURE_DATABASE_DB_URL_REF=""
 
-    echo ""
+    # echo ""
     info "Configure MongoDB connection:"
     echo ""
 
@@ -324,6 +329,8 @@ setup_environment_files() {
         mv "$INSTANCE_DIR/configs/taxii/config/template.env" "$INSTANCE_DIR/configs/taxii/config/dev.env"
         success "Created $INSTANCE_DIR/configs/taxii/config/dev.env"
     fi
+    
+    echo ""
 }
 
 # Configure custom SSL certificates for REST API
@@ -331,7 +338,7 @@ configure_custom_certificates() {
     CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=""
     CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=""
 
-    echo ""
+    # echo ""
     info "Custom SSL certificates allow the REST API to trust additional CA certificates."
     info "This is useful when behind a firewall that performs SSL inspection."
     echo ""
@@ -342,14 +349,16 @@ configure_custom_certificates() {
     read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
     CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
 
-    info "Using certificates from: $CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF/$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
     echo ""
+    info "Using certificates from: $CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF/$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
+    # echo ""
 
     # Add custom cert configuration to .env
     local env_file="$INSTANCE_DIR/.env"
     update_env_file "$env_file" "HOST_CERTS_PATH" "$CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF"
     update_env_file "$env_file" "CERTS_FILENAME" "$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
     success "Added certificate configuration to $env_file"
+    echo ""
 }
 
 #===============================================================================
@@ -373,6 +382,7 @@ add_taxii_to_compose() {
     mv "$temp_file" "$compose_file"
 
     success "TAXII server added to compose.yaml"
+    echo ""
 }
 
 # Verify all required source repositories exist for developer mode
@@ -417,7 +427,7 @@ show_dev_mode_structure() {
     local deployment_dir="$1"
     local enable_taxii="$2"
 
-    echo ""
+    # echo ""
     info "Developer mode requires source repositories to be cloned as siblings to the deployment repository."
     echo ""
     echo "Expected directory structure:"
@@ -695,6 +705,7 @@ else
         exit 1
     fi
 fi
+echo ""
 
 cd "$DEPLOYMENT_DIR"
 
@@ -722,7 +733,7 @@ fi
 # Instance Setup
 #---------------------------------------
 
-echo ""
+# echo ""
 info "Setting up your Workbench instance..."
 echo ""
 
@@ -737,13 +748,13 @@ create_instance "$INSTANCE_DIR" "$DEPLOYMENT_DIR"
 # Deployment Options
 #---------------------------------------
 
-echo ""
+# echo ""
 info "Configuring deployment options..."
 echo ""
 
-
 prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
 ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
+echo ""
 
 if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     # Remove TAXII configs if not needed
@@ -756,7 +767,6 @@ fi
 # Environment Configuration
 #---------------------------------------
 
-echo ""
 configure_database
 DATABASE_URL="$CONFIGURE_DATABASE_DB_URL_REF"
 setup_environment_files "$DATABASE_URL"
@@ -765,7 +775,7 @@ if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     add_taxii_to_compose
 fi
 
-echo ""
+# echo ""
 success "Instance '$INSTANCE_NAME' created successfully!"
 echo ""
 
@@ -783,6 +793,7 @@ ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
 HOST_CERTS_PATH="./certs"
 CERTS_FILENAME="custom-certs.pem"
 
+echo ""
 if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
     configure_custom_certificates
     HOST_CERTS_PATH="$CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF"
