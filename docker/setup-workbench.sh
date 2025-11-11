@@ -479,9 +479,9 @@ EOF
     if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
         cat << 'EOF'
     volumes:
-      - ${HOST_CERTS_PATH}:/usr/src/app/certs
+      - ${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
     environment:
-      - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME}
+      - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME:-custom-certs.pem}
 EOF
     fi
 
@@ -511,9 +511,9 @@ generate_rest_api_certs_override() {
 
   rest-api:
     volumes:
-      - ${HOST_CERTS_PATH}:/usr/src/app/certs
+      - ${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
     environment:
-      - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME}
+      - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME:-custom-certs.pem}
 EOF
 }
 
