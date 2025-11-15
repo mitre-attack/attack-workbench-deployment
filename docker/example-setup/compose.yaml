@@ -8,7 +8,7 @@ services:
       - "${ATTACKWB_FRONTEND_HTTP_PORT:-80}:80"
       - "${ATTACKWB_FRONTEND_HTTPS_PORT:-443}:443"
     volumes:
-      - "${ATTACKWB_FRONTEND_NGINX_CONFIG_FILE:-./configs/frontend/nginx.conf}:/etc/nginx/nginx.conf:ro"
+      - "${ATTACKWB_FRONTEND_NGINX_CONFIG_FILE:-./configs/frontend/nginx.api.conf}:/etc/nginx/nginx.conf:ro"
       - "${ATTACKWB_FRONTEND_CERTS_PATH:-./certs}:/etc/nginx/certs:ro"
     restart: unless-stopped
     logging:
