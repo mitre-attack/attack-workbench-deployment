@@ -36,7 +36,7 @@ If you're using environment variables in your shell, you can use:
 
 ```yaml
 volumes:
-  - .${HOST_CERTS_PATH}:/usr/src/app/certs
+  - ${HOST_CERTS_PATH}:/usr/src/app/certs
 environment:
   - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME}
 ```
