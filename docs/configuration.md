@@ -24,12 +24,19 @@ Available environment variables:
 
 ### Frontend
 
-| Variable                              | Default Value                   | Description                        |
-|---------------------------------------|---------------------------------|------------------------------------|
-| `ATTACKWB_FRONTEND_HTTP_PORT`         | `80`                            | Frontend HTTP port                 |
-| `ATTACKWB_FRONTEND_HTTPS_PORT`        | `443`                           | Frontend HTTPS port                |
-| `ATTACKWB_FRONTEND_NGINX_CONFIG_FILE` | `./configs/frontend/nginx.conf` | Path to nginx config file          |
-| `ATTACKWB_FRONTEND_CERTS_PATH`        | `./certs`                       | Path to SSL certificates for nginx |
+| Variable                              | Default Value                       | Description                        |
+|---------------------------------------|-------------------------------------|------------------------------------|
+| `ATTACKWB_FRONTEND_HTTP_PORT`         | `80`                                | Frontend HTTP port                 |
+| `ATTACKWB_FRONTEND_HTTPS_PORT`        | `443`                               | Frontend HTTPS port                |
+| `ATTACKWB_FRONTEND_NGINX_CONFIG_FILE` | `./configs/frontend/nginx.api.conf` | Path to nginx config file          |
+| `ATTACKWB_FRONTEND_CERTS_PATH`        | `./certs`                           | Path to SSL certificates for nginx |
+
+There are four sample nginx config files that can be used as reference:
+
+- `nginx.conf`: Minimal nginx configuration that only routes the Workbench frontend.
+- `nginx.ssl.conf`: Same as `nginx.conf` but with an SSL redirect. You need to provide your own SSL certs in the `ATTACKWB_FRONTEND_CERTS_PATH` directory.
+- `nginx.api.conf` (default): Nginx configuration with an additional `/api` location block for connecting to the REST API container.
+- `nginx.api.ssl.conf`: Same as `nginx.api.conf` but with an SSL redirect. You need to provide your own SSL certs in the `ATTACKWB_FRONTEND_CERTS_PATH` directory.
 
 ### REST API
 
