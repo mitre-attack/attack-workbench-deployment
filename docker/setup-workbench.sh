@@ -17,6 +17,7 @@ ACCEPT_DEFAULTS=false
 AUTO_ENABLE_TAXII=false
 AUTO_DEV_MODE=false
 AUTO_INSTANCE_NAME=""
+AUTO_DATABASE_URL=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --accept-defaults)
@@ -45,6 +46,26 @@ while [[ $# -gt 0 ]]; do
       AUTO_INSTANCE_NAME="${1#*=}"
       if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
         echo "Error: --instance-name requires a value." >&2
+        echo ""
+        usage
+        exit 1
+      fi
+      shift
+      ;;
+    --mongodb-connection)
+      if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+        echo "Error: --mongodb-connection requires a value." >&2
+        echo ""
+        usage
+        exit 1
+      fi
+      AUTO_DATABASE_URL="$2"
+      shift 2
+      ;;
+    --mongodb-connection=*)
+      AUTO_DATABASE_URL="${1#*=}"
+      if [[ -z "$AUTO_DATABASE_URL" ]]; then
+        echo "Error: --mongodb-connection requires a value." >&2
         echo ""
         usage
         exit 1
@@ -291,7 +312,13 @@ get_repo_url() {
 get_instance_name() {
     local default_instance_name="my-workbench"
 
-    # If defaults are automatically accepted, use the default index and skip prompting
+    # If instance name was provided via cli, use the cli value and skip prompting
+    if [[ -n "${AUTO_INSTANCE_NAME-}" ]]; then
+        GET_INSTANCE_NAME_NAME_REF="${AUTO_INSTANCE_NAME}"
+        return
+    fi
+
+    # If defaults are automatically accepted, use the default name and skip prompting
     if $ACCEPT_DEFAULTS; then
         GET_INSTANCE_NAME_NAME_REF="${default_instance_name}"
         return
@@ -365,6 +392,13 @@ configure_database() {
     # echo ""
     info "Configure MongoDB connection:"
     echo ""
+
+    # If instance name was provided via cli, use the cli value and skip prompting
+    if [[ -n "${AUTO_DATABASE_URL-}" ]]; then
+        CONFIGURE_DATABASE_DB_URL_REF="${AUTO_DATABASE_URL}"
+        info "Using custom connection: $CONFIGURE_DATABASE_DB_URL_REF"
+        return
+    fi
 
     prompt_menu 1 \
         "Docker setup ($DB_URL_DOCKER)" \
@@ -824,12 +858,8 @@ fi
 info "Setting up your Workbench instance..."
 echo ""
 
-if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
-  get_instance_name
-  INSTANCE_NAME="$GET_INSTANCE_NAME_NAME_REF"
-else
-  INSTANCE_NAME="$AUTO_INSTANCE_NAME"
-fi
+get_instance_name
+INSTANCE_NAME="$GET_INSTANCE_NAME_NAME_REF"
 INSTANCE_DIR="$DEPLOYMENT_DIR/instances/$INSTANCE_NAME"
 
 handle_existing_instance "$INSTANCE_DIR" "$INSTANCE_NAME"
