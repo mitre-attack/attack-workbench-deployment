@@ -3,6 +3,7 @@
 # Parse optional CLI arguments
 ACCEPT_DEFAULTS=false
 AUTO_ENABLE_TAXII=false
+AUTO_DEV_MODE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --accept-defaults)
@@ -11,6 +12,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --taxii-server)
       AUTO_ENABLE_TAXII=true
+      shift
+      ;;
+    --dev-mode)
+      AUTO_DEV_MODE=true
       shift
       ;;
     *)
@@ -826,9 +831,12 @@ echo ""
 # Additional Options
 #---------------------------------------
 
-
-prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
-DEV_MODE="$PROMPT_YES_NO_RESULT"
+if $AUTO_DEV_MODE; then
+    DEV_MODE="y"
+else
+    prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
+    DEV_MODE="$PROMPT_YES_NO_RESULT"
+fi
 
 prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
 ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
