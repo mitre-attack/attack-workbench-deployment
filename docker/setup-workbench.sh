@@ -2,10 +2,15 @@
 
 # Parse optional CLI arguments
 ACCEPT_DEFAULTS=false
+AUTO_ENABLE_TAXII=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --accept-defaults)
       ACCEPT_DEFAULTS=true
+      shift
+      ;;
+    --taxii-server)
+      AUTO_ENABLE_TAXII=true
       shift
       ;;
     *)
@@ -243,7 +248,7 @@ get_instance_name() {
         GET_INSTANCE_NAME_NAME_REF="${default_instance_name}"
         return
     fi
-    
+
     read -p "Enter instance name [my-workbench]: " GET_INSTANCE_NAME_NAME_REF
     GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-$default_instance_name}
 
@@ -786,9 +791,13 @@ create_instance "$INSTANCE_DIR" "$DEPLOYMENT_DIR"
 info "Configuring deployment options..."
 echo ""
 
-prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
-ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
-echo ""
+if $AUTO_ENABLE_TAXII; then
+    ENABLE_TAXII="y"
+else
+    prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
+    ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
+    echo ""
+fi
 
 if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     # Remove TAXII configs if not needed
