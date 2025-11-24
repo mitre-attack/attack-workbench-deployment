@@ -8,6 +8,7 @@ usage() {
     echo "  --dev-mode              Setup in developer mode (build from source)"
     echo "  --instance-name <name>  Name of the generated configuration"
     echo "  -h, --help              Show this help and exit"
+    echo "  --mongodb-connection    MongoDB connection string"
     echo "  --taxi-server           Deploy with the TAXII server"
 }
 
