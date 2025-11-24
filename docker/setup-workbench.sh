@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 
+usage() {
+  echo "Usage: $(basename "$0") [--instance-name <name>] [-h|--help]"
+  echo
+  echo "Options:"
+  echo "  --instance-name <name>  Optional instance name"
+  echo "  -h, --help              Show this help and exit"
+}
+
 # Parse optional CLI arguments
 ACCEPT_DEFAULTS=false
 AUTO_ENABLE_TAXII=false
 AUTO_DEV_MODE=false
+AUTO_INSTANCE_NAME=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --accept-defaults)
@@ -18,9 +27,39 @@ while [[ $# -gt 0 ]]; do
       AUTO_DEV_MODE=true
       shift
       ;;
-    *)
-      # unknown args passed to script; keep for later processing
+    --instance-name)
+      if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+        echo "Error: --instance-name requires a value." >&2
+        echo ""
+        usage
+        exit 1
+      fi
+      AUTO_INSTANCE_NAME="$2"
+      shift 2
+      ;;
+    --instance-name=*)
+      AUTO_INSTANCE_NAME="${1#*=}"
+      if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
+        echo "Error: --instance-name requires a value." >&2
+        echo ""
+        usage
+        exit 1
+      fi
       shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      echo ""
+      usage
+      exit 1
       ;;
   esac
 done
@@ -781,8 +820,12 @@ fi
 info "Setting up your Workbench instance..."
 echo ""
 
-get_instance_name
-INSTANCE_NAME="$GET_INSTANCE_NAME_NAME_REF"
+if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
+  get_instance_name
+  INSTANCE_NAME="$GET_INSTANCE_NAME_NAME_REF"
+else
+  INSTANCE_NAME="$AUTO_INSTANCE_NAME"
+fi
 INSTANCE_DIR="$DEPLOYMENT_DIR/instances/$INSTANCE_NAME"
 
 handle_existing_instance "$INSTANCE_DIR" "$INSTANCE_NAME"
