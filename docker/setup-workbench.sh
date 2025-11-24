@@ -4,12 +4,14 @@ usage() {
     echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
     echo
     echo "Options:"
-    echo "  --accept-defaults           Run non-interactively using default selections"
-    echo "  --dev-mode                  Setup in developer mode (build from source)"
-    echo "  --instance-name <name>      Name of the generated configuration"
-    echo "  -h, --help                  Show this help and exit"
-    echo "  --mongodb-connection <url>  MongoDB connection string"
-    echo "  --taxi-server               Deploy with the TAXII server"
+    echo "  --accept-defaults             Run non-interactively using default selections"
+    echo "  --dev-mode                    Setup in developer mode (build from source)"
+    echo "  --instance-name <name>        Name of the generated configuration"
+    echo "  -h, --help                    Show this help and exit"
+    echo "  --mongodb-connection <url>    MongoDB connection string"
+    echo "  --taxi-server                 Deploy with the TAXII server"
+    echo "  --ssl-host-certs-path <path>  Host certificates directory path (ex: './certs')"
+    echo "  --ssl-certs-file <file>       Certificates filename (ex: 'custom-certs.pem')"
 }
 
 # Parse optional CLI arguments
@@ -18,6 +20,8 @@ AUTO_ENABLE_TAXII=false
 AUTO_DEV_MODE=false
 AUTO_INSTANCE_NAME=""
 AUTO_DATABASE_URL=""
+AUTO_HOST_CERTS_PATH=""
+AUTO_CERTS_FILENAME=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --accept-defaults)
@@ -72,6 +76,46 @@ while [[ $# -gt 0 ]]; do
             fi
             shift
             ;;
+        --ssl-host-certs-path)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_HOST_CERTS_PATH="$2"
+            shift 2
+            ;;
+        --ssl-host-certs-path=*)
+            AUTO_HOST_CERTS_PATH="${1#*=}"
+            if [[ -z "$AUTO_HOST_CERTS_PATH" ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --ssl-certs-file)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_CERTS_FILENAME="$2"
+            shift 2
+            ;;
+        --ssl-certs-file=*)
+            AUTO_CERTS_FILENAME="${1#*=}"
+            if [[ -z "$AUTO_CERTS_FILENAME" ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
         --taxii-server)
             AUTO_ENABLE_TAXII=true
             shift
@@ -81,7 +125,7 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
         -*)
-            echo "Unknown option: $1" >&2
+            echo "Error: Unknown option: $1" >&2
             echo ""
             usage
             exit 1
@@ -464,11 +508,19 @@ configure_custom_certificates() {
     info "This is useful when behind a firewall that performs SSL inspection."
     echo ""
 
-    read -p "Enter host certificates path [./certs]: " user_certs_path
-    CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=${user_certs_path:-./certs}
+    if [[ -z "${AUTO_HOST_CERTS_PATH}" ]]; then
+        read -p "Enter host certificates path [./certs]: " user_certs_path
+        CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=${user_certs_path:-./certs}
+    else
+        CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF="${AUTO_HOST_CERTS_PATH}"
+    fi
 
-    read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
-    CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
+    if [[ -z "${AUTO_CERTS_FILENAME}" ]]; then
+        read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
+        CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
+    else
+        CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF="${AUTO_CERTS_FILENAME}"
+    fi
 
     echo ""
     info "Using certificates from: $CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF/$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
@@ -915,8 +967,12 @@ else
     DEV_MODE="$PROMPT_YES_NO_RESULT"
 fi
 
-prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
-ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
+if [[ -z "${AUTO_HOST_CERTS_PATH}" && -z "${AUTO_CERTS_FILENAME}" ]]; then
+    prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
+    ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
+else 
+    ENABLE_CUSTOM_CERTS="y"
+fi
 
 HOST_CERTS_PATH="./certs"
 CERTS_FILENAME="custom-certs.pem"
