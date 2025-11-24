@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 
-set -e
+# Parse optional CLI arguments
+ACCEPT_DEFAULTS=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --accept-defaults)
+      ACCEPT_DEFAULTS=true
+      shift
+      ;;
+    *)
+      # unknown args passed to script; keep for later processing
+      shift
+      ;;
+  esac
+done
 
 # ATT&CK Workbench Deployment Setup Script
 # This script helps you quickly set up a custom ATT&CK Workbench instance
@@ -101,6 +114,12 @@ require_directory() {
 # Usage: prompt_yes_no "Question?" "Y"
 # Args: $1=question, $2=default (Y/N)
 prompt_yes_no() {
+    # If defaults are automatically accepted, use the provided default and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        PROMPT_YES_NO_RESULT="${2:-N}"
+        return
+    fi
+
     local question="$1"
     local default="$2"
     PROMPT_YES_NO_RESULT=""
@@ -122,6 +141,12 @@ prompt_yes_no() {
 # Usage: prompt_menu "default_index" "option1" "option2" "option3"
 # Args: $1=default index (1-based), remaining args are menu options
 prompt_menu() {
+    # If defaults are automatically accepted, use the default index and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        PROMPT_MENU_RESULT="${1}"
+        return
+    fi
+
     local default_index="$1"
     shift
     local -a options=("$@")
@@ -211,10 +236,16 @@ get_repo_url() {
 
 # Prompt for and validate instance name
 get_instance_name() {
-    GET_INSTANCE_NAME_NAME_REF=""
+    local default_instance_name="my-workbench"
 
+    # If defaults are automatically accepted, use the default index and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        GET_INSTANCE_NAME_NAME_REF="${default_instance_name}"
+        return
+    fi
+    
     read -p "Enter instance name [my-workbench]: " GET_INSTANCE_NAME_NAME_REF
-    GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-my-workbench}
+    GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-$default_instance_name}
 
     # Validate instance name
     if [[ ! "$GET_INSTANCE_NAME_NAME_REF" =~ ^[a-zA-Z0-9_-]+$ ]]; then
