@@ -119,9 +119,11 @@ prompt_yes_no() {
 }
 
 # Prompt for menu selection with validation
-# Usage: prompt_menu "option1" "option2" "option3"
-# Args: menu options
+# Usage: prompt_menu "default_index" "option1" "option2" "option3"
+# Args: $1=default index (1-based), remaining args are menu options
 prompt_menu() {
+    local default_index="$1"
+    shift
     local -a options=("$@")
     local num_options=${#options[@]}
 
@@ -131,7 +133,8 @@ prompt_menu() {
             echo "$((i + 1))) ${options[$i]}"
         done
         echo ""
-        read -p "Select option [1-$num_options]: " -r choice
+        read -p "Select option 1-$num_options: [1] " -r choice
+        choice=${choice:-$default_index}
 
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$num_options" ]; then
             PROMPT_MENU_RESULT="$choice"
@@ -279,7 +282,7 @@ configure_database() {
     info "Configure MongoDB connection:"
     echo ""
 
-    prompt_menu \
+    prompt_menu 1 \
         "Docker setup ($DB_URL_DOCKER)" \
         "Local MongoDB ($DB_URL_LOCAL)" \
         "Custom connection string"
