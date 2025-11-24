@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 usage() {
-    echo "Usage: $(basename "$0") [--instance-name <name>] [-h|--help]"
+    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
     echo
     echo "Options:"
-    echo "  --accept-defaults       Run non-interactively using default selections"
-    echo "  --dev-mode              Setup in developer mode (build from source)"
-    echo "  --instance-name <name>  Name of the generated configuration"
-    echo "  -h, --help              Show this help and exit"
-    echo "  --mongodb-connection    MongoDB connection string"
-    echo "  --taxi-server           Deploy with the TAXII server"
+    echo "  --accept-defaults           Run non-interactively using default selections"
+    echo "  --dev-mode                  Setup in developer mode (build from source)"
+    echo "  --instance-name <name>      Name of the generated configuration"
+    echo "  -h, --help                  Show this help and exit"
+    echo "  --mongodb-connection <url>  MongoDB connection string"
+    echo "  --taxi-server               Deploy with the TAXII server"
 }
 
 # Parse optional CLI arguments
