@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
 usage() {
-  echo "Usage: $(basename "$0") [--instance-name <name>] [-h|--help]"
-  echo
-  echo "Options:"
-  echo "  --accept-defaults       Run non-interactively using default selections"
-  echo "  --dev-mode              Setup in developer mode (build from source)"
-  echo "  --instance-name <name>  Name of the generated configuration"
-  echo "  -h, --help              Show this help and exit"
-  echo "  --taxi-server           Deploy with the TAXII server"
-
+    echo "Usage: $(basename "$0") [--instance-name <name>] [-h|--help]"
+    echo
+    echo "Options:"
+    echo "  --accept-defaults       Run non-interactively using default selections"
+    echo "  --dev-mode              Setup in developer mode (build from source)"
+    echo "  --instance-name <name>  Name of the generated configuration"
+    echo "  -h, --help              Show this help and exit"
+    echo "  --taxi-server           Deploy with the TAXII server"
 }
 
 # Parse optional CLI arguments
@@ -19,74 +18,74 @@ AUTO_DEV_MODE=false
 AUTO_INSTANCE_NAME=""
 AUTO_DATABASE_URL=""
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --accept-defaults)
-      ACCEPT_DEFAULTS=true
-      shift
-      ;;
-    --dev-mode)
-      AUTO_DEV_MODE=true
-      shift
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --instance-name)
-      if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-        echo "Error: --instance-name requires a value." >&2
-        echo ""
-        usage
-        exit 1
-      fi
-      AUTO_INSTANCE_NAME="$2"
-      shift 2
-      ;;
-    --instance-name=*)
-      AUTO_INSTANCE_NAME="${1#*=}"
-      if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
-        echo "Error: --instance-name requires a value." >&2
-        echo ""
-        usage
-        exit 1
-      fi
-      shift
-      ;;
-    --mongodb-connection)
-      if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-        echo "Error: --mongodb-connection requires a value." >&2
-        echo ""
-        usage
-        exit 1
-      fi
-      AUTO_DATABASE_URL="$2"
-      shift 2
-      ;;
-    --mongodb-connection=*)
-      AUTO_DATABASE_URL="${1#*=}"
-      if [[ -z "$AUTO_DATABASE_URL" ]]; then
-        echo "Error: --mongodb-connection requires a value." >&2
-        echo ""
-        usage
-        exit 1
-      fi
-      shift
-      ;;
-    --taxii-server)
-      AUTO_ENABLE_TAXII=true
-      shift
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -*)
-      echo "Unknown option: $1" >&2
-      echo ""
-      usage
-      exit 1
-      ;;
-  esac
+    case "$1" in
+        --accept-defaults)
+            ACCEPT_DEFAULTS=true
+            shift
+            ;;
+        --dev-mode)
+            AUTO_DEV_MODE=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --instance-name)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_INSTANCE_NAME="$2"
+            shift 2
+            ;;
+        --instance-name=*)
+            AUTO_INSTANCE_NAME="${1#*=}"
+            if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --mongodb-connection)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_DATABASE_URL="$2"
+            shift 2
+            ;;
+        --mongodb-connection=*)
+            AUTO_DATABASE_URL="${1#*=}"
+            if [[ -z "$AUTO_DATABASE_URL" ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --taxii-server)
+            AUTO_ENABLE_TAXII=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
 done
 
 # ATT&CK Workbench Deployment Setup Script
