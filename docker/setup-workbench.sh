@@ -4,8 +4,12 @@ usage() {
   echo "Usage: $(basename "$0") [--instance-name <name>] [-h|--help]"
   echo
   echo "Options:"
-  echo "  --instance-name <name>  Optional instance name"
+  echo "  --accept-defaults       Run non-interactively using default selections"
+  echo "  --dev-mode              Setup in developer mode (build from source)"
+  echo "  --instance-name <name>  Name of the generated configuration"
   echo "  -h, --help              Show this help and exit"
+  echo "  --taxi-server           Deploy with the TAXII server"
+
 }
 
 # Parse optional CLI arguments
@@ -19,13 +23,13 @@ while [[ $# -gt 0 ]]; do
       ACCEPT_DEFAULTS=true
       shift
       ;;
-    --taxii-server)
-      AUTO_ENABLE_TAXII=true
-      shift
-      ;;
     --dev-mode)
       AUTO_DEV_MODE=true
       shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
       ;;
     --instance-name)
       if [[ $# -lt 2 || "${2:-}" == -* ]]; then
@@ -47,9 +51,9 @@ while [[ $# -gt 0 ]]; do
       fi
       shift
       ;;
-    -h|--help)
-      usage
-      exit 0
+    --taxii-server)
+      AUTO_ENABLE_TAXII=true
+      shift
       ;;
     --)
       shift
