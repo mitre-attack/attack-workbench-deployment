@@ -1,138 +1,5 @@
 #!/usr/bin/env bash
 
-usage() {
-    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
-    echo
-    echo "Options:"
-    echo "  --accept-defaults             Run non-interactively using default selections"
-    echo "  --dev-mode                    Setup in developer mode (build from source)"
-    echo "  --instance-name <name>        Name of the generated configuration"
-    echo "  -h, --help                    Show this help and exit"
-    echo "  --mongodb-connection <url>    MongoDB connection string"
-    echo "  --taxi-server                 Deploy with the TAXII server"
-    echo "  --ssl-host-certs-path <path>  Host certificates directory path (ex: './certs')"
-    echo "  --ssl-certs-file <file>       Certificates filename (ex: 'custom-certs.pem')"
-}
-
-# Parse optional CLI arguments
-ACCEPT_DEFAULTS=false
-AUTO_ENABLE_TAXII=false
-AUTO_DEV_MODE=false
-AUTO_INSTANCE_NAME=""
-AUTO_DATABASE_URL=""
-AUTO_HOST_CERTS_PATH=""
-AUTO_CERTS_FILENAME=""
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --accept-defaults)
-            ACCEPT_DEFAULTS=true
-            shift
-            ;;
-        --dev-mode)
-            AUTO_DEV_MODE=true
-            shift
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --instance-name)
-            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-                echo "Error: --instance-name requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            AUTO_INSTANCE_NAME="$2"
-            shift 2
-            ;;
-        --instance-name=*)
-            AUTO_INSTANCE_NAME="${1#*=}"
-            if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
-                echo "Error: --instance-name requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            shift
-            ;;
-        --mongodb-connection)
-            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-                echo "Error: --mongodb-connection requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            AUTO_DATABASE_URL="$2"
-            shift 2
-            ;;
-        --mongodb-connection=*)
-            AUTO_DATABASE_URL="${1#*=}"
-            if [[ -z "$AUTO_DATABASE_URL" ]]; then
-                echo "Error: --mongodb-connection requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            shift
-            ;;
-        --ssl-host-certs-path)
-            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-                echo "Error: --ssl-host-certs-path requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            AUTO_HOST_CERTS_PATH="$2"
-            shift 2
-            ;;
-        --ssl-host-certs-path=*)
-            AUTO_HOST_CERTS_PATH="${1#*=}"
-            if [[ -z "$AUTO_HOST_CERTS_PATH" ]]; then
-                echo "Error: --ssl-host-certs-path requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            shift
-            ;;
-        --ssl-certs-file)
-            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
-                echo "Error: --ssl-certs-file requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            AUTO_CERTS_FILENAME="$2"
-            shift 2
-            ;;
-        --ssl-certs-file=*)
-            AUTO_CERTS_FILENAME="${1#*=}"
-            if [[ -z "$AUTO_CERTS_FILENAME" ]]; then
-                echo "Error: --ssl-certs-file requires a value." >&2
-                echo ""
-                usage
-                exit 1
-            fi
-            shift
-            ;;
-        --taxii-server)
-            AUTO_ENABLE_TAXII=true
-            shift
-            ;;
-        --)
-            shift
-            break
-            ;;
-        -*)
-            echo "Error: Unknown option: $1" >&2
-            echo ""
-            usage
-            exit 1
-            ;;
-    esac
-done
-
 # ATT&CK Workbench Deployment Setup Script
 # This script helps you quickly set up a custom ATT&CK Workbench instance
 #
@@ -819,6 +686,146 @@ show_deployment_instructions() {
     echo "  Deployment:    $deployment_dir/docs/deployment.md"
     echo ""
 }
+
+# Display script usage information
+usage() {
+    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
+    echo
+    echo "Generate Docker Compose configurations to deploy local workbench instances."
+    echo
+    echo "Options:"
+    echo "  --accept-defaults             Run non-interactively using default selections unless overriden by other options"
+    echo "  --dev-mode                    Setup in developer mode (build from source)"
+    echo "  --instance-name <name>        Name of the generated configuration"
+    echo "  -h, --help                    Show this help and exit"
+    echo "  --mongodb-connection <url>    MongoDB connection string"
+    echo "  --taxi-server                 Deploy with the TAXII server"
+    echo "  --ssl-host-certs-path <path>  Host certificates directory path (default \"./certs\")"
+    echo "  --ssl-certs-file <file>       Certificates filename (default \"custom-certs.pem\")"
+}
+
+#===============================================================================
+# ARGUMENT PARSING
+#===============================================================================
+
+# Parse optional CLI arguments
+ACCEPT_DEFAULTS=false
+AUTO_ENABLE_TAXII=false
+AUTO_DEV_MODE=false
+AUTO_INSTANCE_NAME=""
+AUTO_DATABASE_URL=""
+AUTO_HOST_CERTS_PATH=""
+AUTO_CERTS_FILENAME=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --accept-defaults)
+            ACCEPT_DEFAULTS=true
+            shift
+            ;;
+        --dev-mode)
+            AUTO_DEV_MODE=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --instance-name)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_INSTANCE_NAME="$2"
+            shift 2
+            ;;
+        --instance-name=*)
+            AUTO_INSTANCE_NAME="${1#*=}"
+            if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --mongodb-connection)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_DATABASE_URL="$2"
+            shift 2
+            ;;
+        --mongodb-connection=*)
+            AUTO_DATABASE_URL="${1#*=}"
+            if [[ -z "$AUTO_DATABASE_URL" ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --ssl-host-certs-path)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_HOST_CERTS_PATH="$2"
+            shift 2
+            ;;
+        --ssl-host-certs-path=*)
+            AUTO_HOST_CERTS_PATH="${1#*=}"
+            if [[ -z "$AUTO_HOST_CERTS_PATH" ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --ssl-certs-file)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_CERTS_FILENAME="$2"
+            shift 2
+            ;;
+        --ssl-certs-file=*)
+            AUTO_CERTS_FILENAME="${1#*=}"
+            if [[ -z "$AUTO_CERTS_FILENAME" ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --taxii-server)
+            AUTO_ENABLE_TAXII=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: Unknown option: $1" >&2
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
+done
 
 #===============================================================================
 # BANNER
