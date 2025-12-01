@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 # ATT&CK Workbench Deployment Setup Script
 # This script helps you quickly set up a custom ATT&CK Workbench instance
 #
@@ -101,6 +99,12 @@ require_directory() {
 # Usage: prompt_yes_no "Question?" "Y"
 # Args: $1=question, $2=default (Y/N)
 prompt_yes_no() {
+    # If defaults are automatically accepted, use the provided default and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        PROMPT_YES_NO_RESULT="${2:-N}"
+        return
+    fi
+
     local question="$1"
     local default="$2"
     PROMPT_YES_NO_RESULT=""
@@ -119,9 +123,17 @@ prompt_yes_no() {
 }
 
 # Prompt for menu selection with validation
-# Usage: prompt_menu "option1" "option2" "option3"
-# Args: menu options
+# Usage: prompt_menu "default_index" "option1" "option2" "option3"
+# Args: $1=default index (1-based), remaining args are menu options
 prompt_menu() {
+    # If defaults are automatically accepted, use the default index and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        PROMPT_MENU_RESULT="${1}"
+        return
+    fi
+
+    local default_index="$1"
+    shift
     local -a options=("$@")
     local num_options=${#options[@]}
 
@@ -131,7 +143,8 @@ prompt_menu() {
             echo "$((i + 1))) ${options[$i]}"
         done
         echo ""
-        read -p "Select option [1-$num_options]: " -r choice
+        read -p "Select option 1-$num_options: [1] " -r choice
+        choice=${choice:-$default_index}
 
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$num_options" ]; then
             PROMPT_MENU_RESULT="$choice"
@@ -208,10 +221,22 @@ get_repo_url() {
 
 # Prompt for and validate instance name
 get_instance_name() {
-    GET_INSTANCE_NAME_NAME_REF=""
+    local default_instance_name="my-workbench"
+
+    # If instance name was provided via cli, use the cli value and skip prompting
+    if [[ -n "${AUTO_INSTANCE_NAME-}" ]]; then
+        GET_INSTANCE_NAME_NAME_REF="${AUTO_INSTANCE_NAME}"
+        return
+    fi
+
+    # If defaults are automatically accepted, use the default name and skip prompting
+    if $ACCEPT_DEFAULTS; then
+        GET_INSTANCE_NAME_NAME_REF="${default_instance_name}"
+        return
+    fi
 
     read -p "Enter instance name [my-workbench]: " GET_INSTANCE_NAME_NAME_REF
-    GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-my-workbench}
+    GET_INSTANCE_NAME_NAME_REF=${GET_INSTANCE_NAME_NAME_REF:-$default_instance_name}
 
     # Validate instance name
     if [[ ! "$GET_INSTANCE_NAME_NAME_REF" =~ ^[a-zA-Z0-9_-]+$ ]]; then
@@ -279,7 +304,14 @@ configure_database() {
     info "Configure MongoDB connection:"
     echo ""
 
-    prompt_menu \
+    # If instance name was provided via cli, use the cli value and skip prompting
+    if [[ -n "${AUTO_DATABASE_URL-}" ]]; then
+        CONFIGURE_DATABASE_DB_URL_REF="${AUTO_DATABASE_URL}"
+        info "Using custom connection: $CONFIGURE_DATABASE_DB_URL_REF"
+        return
+    fi
+
+    prompt_menu 1 \
         "Docker setup ($DB_URL_DOCKER)" \
         "Local MongoDB ($DB_URL_LOCAL)" \
         "Custom connection string"
@@ -343,11 +375,19 @@ configure_custom_certificates() {
     info "This is useful when behind a firewall that performs SSL inspection."
     echo ""
 
-    read -p "Enter host certificates path [./certs]: " user_certs_path
-    CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=${user_certs_path:-./certs}
+    if [[ -z "${AUTO_HOST_CERTS_PATH}" ]]; then
+        read -p "Enter host certificates path [./certs]: " user_certs_path
+        CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=${user_certs_path:-./certs}
+    else
+        CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF="${AUTO_HOST_CERTS_PATH}"
+    fi
 
-    read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
-    CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
+    if [[ -z "${AUTO_CERTS_FILENAME}" ]]; then
+        read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
+        CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=${user_certs_filename:-custom-certs.pem}
+    else
+        CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF="${AUTO_CERTS_FILENAME}"
+    fi
 
     echo ""
     info "Using certificates from: $CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF/$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
@@ -647,6 +687,146 @@ show_deployment_instructions() {
     echo ""
 }
 
+# Display script usage information
+usage() {
+    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
+    echo
+    echo "Generate Docker Compose configurations to deploy local workbench instances."
+    echo
+    echo "Options:"
+    echo "  --accept-defaults             Run non-interactively using default selections unless overriden by other options"
+    echo "  --dev-mode                    Setup in developer mode (build from source)"
+    echo "  --instance-name <name>        Name of the generated configuration"
+    echo "  -h, --help                    Show this help and exit"
+    echo "  --mongodb-connection <url>    MongoDB connection string"
+    echo "  --taxi-server                 Deploy with the TAXII server"
+    echo "  --ssl-host-certs-path <path>  Host certificates directory path (default \"./certs\")"
+    echo "  --ssl-certs-file <file>       Certificates filename (default \"custom-certs.pem\")"
+}
+
+#===============================================================================
+# ARGUMENT PARSING
+#===============================================================================
+
+# Parse optional CLI arguments
+ACCEPT_DEFAULTS=false
+AUTO_ENABLE_TAXII=false
+AUTO_DEV_MODE=false
+AUTO_INSTANCE_NAME=""
+AUTO_DATABASE_URL=""
+AUTO_HOST_CERTS_PATH=""
+AUTO_CERTS_FILENAME=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --accept-defaults)
+            ACCEPT_DEFAULTS=true
+            shift
+            ;;
+        --dev-mode)
+            AUTO_DEV_MODE=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --instance-name)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_INSTANCE_NAME="$2"
+            shift 2
+            ;;
+        --instance-name=*)
+            AUTO_INSTANCE_NAME="${1#*=}"
+            if [[ -z "$AUTO_INSTANCE_NAME" ]]; then
+                echo "Error: --instance-name requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --mongodb-connection)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_DATABASE_URL="$2"
+            shift 2
+            ;;
+        --mongodb-connection=*)
+            AUTO_DATABASE_URL="${1#*=}"
+            if [[ -z "$AUTO_DATABASE_URL" ]]; then
+                echo "Error: --mongodb-connection requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --ssl-host-certs-path)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_HOST_CERTS_PATH="$2"
+            shift 2
+            ;;
+        --ssl-host-certs-path=*)
+            AUTO_HOST_CERTS_PATH="${1#*=}"
+            if [[ -z "$AUTO_HOST_CERTS_PATH" ]]; then
+                echo "Error: --ssl-host-certs-path requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --ssl-certs-file)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_CERTS_FILENAME="$2"
+            shift 2
+            ;;
+        --ssl-certs-file=*)
+            AUTO_CERTS_FILENAME="${1#*=}"
+            if [[ -z "$AUTO_CERTS_FILENAME" ]]; then
+                echo "Error: --ssl-certs-file requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+        --taxii-server)
+            AUTO_ENABLE_TAXII=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: Unknown option: $1" >&2
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
+done
+
 #===============================================================================
 # BANNER
 #===============================================================================
@@ -752,9 +932,13 @@ create_instance "$INSTANCE_DIR" "$DEPLOYMENT_DIR"
 info "Configuring deployment options..."
 echo ""
 
-prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
-ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
-echo ""
+if $AUTO_ENABLE_TAXII; then
+    ENABLE_TAXII="y"
+else
+    prompt_yes_no "Do you want to deploy with the TAXII server?" "N"
+    ENABLE_TAXII="$PROMPT_YES_NO_RESULT"
+    echo ""
+fi
 
 if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     # Remove TAXII configs if not needed
@@ -783,12 +967,19 @@ echo ""
 # Additional Options
 #---------------------------------------
 
+if $AUTO_DEV_MODE; then
+    DEV_MODE="y"
+else
+    prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
+    DEV_MODE="$PROMPT_YES_NO_RESULT"
+fi
 
-prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
-DEV_MODE="$PROMPT_YES_NO_RESULT"
-
-prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
-ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
+if [[ -z "${AUTO_HOST_CERTS_PATH}" && -z "${AUTO_CERTS_FILENAME}" ]]; then
+    prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
+    ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
+else 
+    ENABLE_CUSTOM_CERTS="y"
+fi
 
 HOST_CERTS_PATH="./certs"
 CERTS_FILENAME="custom-certs.pem"
