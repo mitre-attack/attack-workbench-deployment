@@ -901,7 +901,7 @@ fi
 # Check for Docker Compose (warn but don't fail)
 if ! docker compose version &> /dev/null 2>&1; then
     warning "Docker Compose is not available"
-    echo "  Please install Docker Compose (usually included with Docker Desktop)"
+    echo "  Please install Docker Compose"
 fi
 
 
