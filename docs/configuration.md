@@ -58,9 +58,10 @@ See `compose.certs.yaml` for details
 
 ### Database
 
-| Variable           | Default Value | Description  |
-|--------------------|---------------|--------------|
-| `ATTACKWB_DB_PORT` | `27017`       | MongoDB port |
+| Variable                  | Default Value       | Description              |
+|---------------------------|---------------------|--------------------------|
+| `ATTACKWB_DB_PORT`        | `27017`             | MongoDB port             |
+| `ATTACKWB_DB_BACKUP_PATH` | `./database-backup` | MongoDB backup directory |
 
 ### TAXII Server
 

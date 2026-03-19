@@ -45,7 +45,7 @@ services:
       - "127.0.0.1:${ATTACKWB_DB_PORT:-27017}:27017"
     volumes:
       - workspace-data:/data/db
-      - ./database-backup:/dump
+      - "${ATTACKWB_DB_BACKUP_PATH:-./database-backup}:/dump"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
