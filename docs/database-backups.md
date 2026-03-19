@@ -1,8 +1,10 @@
 # Database Backups
 
+TODO: Clean up this documentation! Make it way easier to manage!
+
 The MongoDB commands `mongodump` and `mongorestore` can be used to create the database backup files and to restore the database using those files.
 
-The `compose.yaml` file maps the `database-backup/` directory on the host to the `/dump` directory
+The `compose.yaml` file maps the `ATTACKWB_DB_BACKUP_PATH` directory (defaults to `database-backup/`) on the host to the `/dump` directory
 in the container in order to ease access to the backup files and to make sure those files exist even if the container is deleted.
 This directory is listed in the `.gitignore` file so the backup files will not be added to the git repo.
 
