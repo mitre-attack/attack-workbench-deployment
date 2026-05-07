@@ -12,6 +12,11 @@ Copy `template.env` to `.env` and customize the values as needed:
 cp template.env .env
 ```
 
+If you use `docker/setup-workbench.sh`, the script can also rewrite these path
+variables to point at a dedicated host directory via `--host-mount-dir`. This
+is useful in environments that require all Docker mounts to come from a
+specific location such as `/Users/Shared/Docker/...`.
+
 Available environment variables:
 
 ### Docker Image Tags
@@ -20,6 +25,7 @@ Available environment variables:
 |-----------------------------|---------------|-------------------------------|
 | `ATTACKWB_FRONTEND_VERSION` | `latest`      | Frontend Docker image tag     |
 | `ATTACKWB_RESTAPI_VERSION`  | `latest`      | REST API Docker image tag     |
+| `ATTACKWB_GRAFANA_VERSION`  | `latest`      | Grafana Docker image tag      |
 | `ATTACKWB_TAXII_VERSION`    | `latest`      | TAXII server Docker image tag |
 
 ### Frontend
@@ -46,10 +52,26 @@ There are four sample nginx config files that can be used as reference:
 | `ATTACKWB_RESTAPI_CONFIG_FILE` | `./configs/rest-api/rest-api-service-config.json` | Path to REST API JSON config file                 |
 | `ATTACKWB_RESTAPI_ENV_FILE`    | `./configs/rest-api/.env`                         | Path to REST API environment variable config file |
 
+### Grafana
+
+| Variable                         | Default Value                         | Description                                   |
+|----------------------------------|---------------------------------------|-----------------------------------------------|
+| `ATTACKWB_GRAFANA_PORT`          | `3001`                                | Grafana HTTP port                             |
+| `ATTACKWB_GRAFANA_ENV_FILE`      | `./configs/grafana/.env`              | Path to Grafana environment variable config   |
+| `ATTACKWB_GRAFANA_PROVISIONING_PATH` | `./configs/grafana/provisioning`  | Path to Grafana provisioning directory        |
+
+### Insights Agent
+
+| Variable                           | Default Value                        | Description                                         |
+|------------------------------------|--------------------------------------|-----------------------------------------------------|
+| `ATTACKWB_INSIGHTS_AGENT_ENV_FILE` | `./configs/insights-agent/.env`      | Path to the insights agent environment config file  |
+| `ATTACKWB_INSIGHTS_AGENT_SYSTEM_PROMPT_FILE` | `../../insights-agent/system-prompt.md` | Path to the mounted system prompt file      |
+
 ### REST API Custom SSL certs (Optional)
 
-These will be used to set `NODE_EXTRA_CA_CERTS` in the REST API docker container.
-See `compose.certs.yaml` for details
+These will be used to set `NODE_EXTRA_CA_CERTS` in the REST API container and
+to mount a custom CA file for the optional Grafana and insights-agent services.
+See `compose.certs.yaml` for the REST API reference overlay.
 
 | Variable          | Default Value      | Description                   |
 |-------------------|--------------------|-------------------------------|
@@ -99,6 +121,26 @@ for further details on customizing the backend.
 - `MONGOSTORE_CRYPTO_SECRET` - Secret used to encrypt session data in MongoDB
 
 Generate secure secrets using: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
+
+### Grafana
+
+**Config files**: [configs/grafana/](../docker/example-setup/configs/grafana/)
+
+The Grafana container loads runtime configuration from its own dotenv file.
+The provisioning directory is mounted read-only so you can add datasources and
+dashboard providers without modifying the compose template.
+
+### Insights Agent
+
+**Config files**: [configs/insights-agent/](../docker/example-setup/configs/insights-agent/)
+
+The insights agent loads all runtime configuration from a dedicated dotenv file.
+Set `MONGODB_DATABASE_URL` to the same connection string used by the REST API
+and configure the LLM settings there.
+
+The system prompt is loaded from a separate mounted file referenced by
+`ATTACKWB_INSIGHTS_AGENT_SYSTEM_PROMPT_FILE`, so prompt changes do not require
+rebuilding the insights-agent image.
 
 ### TAXII Server
 

@@ -10,7 +10,7 @@
 #   4. Helper Functions (prompts, file operations)
 #   5. Instance Management Functions
 #   6. Configuration Functions (database, environment, certificates)
-#   7. Deployment Option Functions (TAXII, dev mode)
+#   7. Deployment Option Functions (TAXII, insights, dev mode)
 #   8. Compose Override Generation Functions
 #   9. Output Functions (summary, instructions)
 #  10. Main Execution Flow
@@ -174,6 +174,26 @@ prompt_non_empty() {
     done
 }
 
+# Resolve a path to an absolute path, using a base directory for relative inputs
+# Usage: resolve_absolute_path "./relative/path" "/base/dir"
+resolve_absolute_path() {
+    local input_path="$1"
+    local base_dir="$2"
+    local resolved_path=""
+
+    if [[ "$input_path" == /* ]]; then
+        resolved_path="$input_path"
+    else
+        resolved_path="$base_dir/$input_path"
+    fi
+
+    local parent_dir
+    parent_dir="$(dirname "$resolved_path")"
+    mkdir -p "$parent_dir"
+    parent_dir="$(cd "$parent_dir" && pwd)"
+    echo "$parent_dir/$(basename "$resolved_path")"
+}
+
 # Update or add a key=value in an env file
 # Usage: update_env_file "/path/to/.env" "KEY" "value"
 update_env_file() {
@@ -285,6 +305,7 @@ create_instance() {
     find "$source_dir" -maxdepth 1 \
         ! -name "compose.dev.yaml" \
         ! -name "compose.certs.yaml" \
+        ! -name "compose.insights.yaml" \
         ! -name "compose.taxii.yaml" \
         ! -path "$source_dir" \
         -exec cp -r {} "$instance_dir/" \;
@@ -336,6 +357,29 @@ configure_database() {
     echo ""
 }
 
+# Configure the host directory that will store all files mounted into containers
+configure_host_mount_dir() {
+    CONFIGURE_HOST_MOUNT_DIR_REF=""
+
+    local default_mount_dir="$INSTANCE_DIR"
+
+    info "Configure host directory for container-mounted files:"
+    echo ""
+
+    if [[ -n "${AUTO_HOST_MOUNT_DIR-}" ]]; then
+        CONFIGURE_HOST_MOUNT_DIR_REF="${AUTO_HOST_MOUNT_DIR}"
+    elif $ACCEPT_DEFAULTS; then
+        CONFIGURE_HOST_MOUNT_DIR_REF="$default_mount_dir"
+    else
+        read -p "Enter host directory for files mounted into containers [$default_mount_dir]: " user_mount_dir
+        CONFIGURE_HOST_MOUNT_DIR_REF=${user_mount_dir:-$default_mount_dir}
+    fi
+
+    CONFIGURE_HOST_MOUNT_DIR_REF="$(resolve_absolute_path "$CONFIGURE_HOST_MOUNT_DIR_REF" "$INSTANCE_DIR")"
+    info "Using host mount directory: $CONFIGURE_HOST_MOUNT_DIR_REF"
+    echo ""
+}
+
 # Set up all environment files for the instance
 setup_environment_files() {
     local database_url="$1"
@@ -356,6 +400,25 @@ setup_environment_files() {
         success "Created $rest_api_env with DATABASE_URL configured"
     fi
 
+    # Grafana .env file (optional)
+    if [[ -f "$INSTANCE_DIR/configs/grafana/template.env" ]]; then
+        mv "$INSTANCE_DIR/configs/grafana/template.env" "$INSTANCE_DIR/configs/grafana/.env"
+        success "Created $INSTANCE_DIR/configs/grafana/.env"
+    fi
+
+    # Insights agent .env file (optional)
+    if [[ -f "$INSTANCE_DIR/configs/insights-agent/template.env" ]]; then
+        local insights_env="$INSTANCE_DIR/configs/insights-agent/.env"
+        mv "$INSTANCE_DIR/configs/insights-agent/template.env" "$insights_env"
+        update_env_file "$insights_env" "MONGODB_DATABASE_URL" "$database_url"
+        success "Created $insights_env with MONGODB_DATABASE_URL configured"
+
+        local system_prompt_file="$INSTANCE_DIR/configs/insights-agent/system-prompt.md"
+        cp "$DEPLOYMENT_DIR/insights-agent/system-prompt.md" "$system_prompt_file"
+        update_env_file "$INSTANCE_DIR/.env" "ATTACKWB_INSIGHTS_AGENT_SYSTEM_PROMPT_FILE" "./configs/insights-agent/system-prompt.md"
+        success "Created $system_prompt_file"
+    fi
+
     # TAXII .env file (optional)
     if [[ -f "$INSTANCE_DIR/configs/taxii/config/template.env" ]]; then
         mv "$INSTANCE_DIR/configs/taxii/config/template.env" "$INSTANCE_DIR/configs/taxii/config/dev.env"
@@ -365,13 +428,65 @@ setup_environment_files() {
     echo ""
 }
 
+# Copy files that must be mounted into containers into the selected host directory
+sync_container_mount_files() {
+    local source_instance_dir="$1"
+    local host_mount_dir="$2"
+    local env_file="$source_instance_dir/.env"
+
+    if [[ "$host_mount_dir" == "$source_instance_dir" ]]; then
+        return
+    fi
+
+    info "Syncing container-mounted files to: $host_mount_dir"
+
+    mkdir -p "$host_mount_dir/configs" "$host_mount_dir/certs" "$host_mount_dir/database-backup"
+
+    if [[ -d "$source_instance_dir/configs" ]]; then
+        cp -R "$source_instance_dir/configs/." "$host_mount_dir/configs/"
+    fi
+
+    if [[ -d "$source_instance_dir/certs" ]]; then
+        cp -R "$source_instance_dir/certs/." "$host_mount_dir/certs/"
+    fi
+
+    if [[ -d "$source_instance_dir/database-backup" ]]; then
+        cp -R "$source_instance_dir/database-backup/." "$host_mount_dir/database-backup/"
+    fi
+
+    update_env_file "$env_file" "ATTACKWB_FRONTEND_NGINX_CONFIG_FILE" "$host_mount_dir/configs/frontend/nginx.api.conf"
+    update_env_file "$env_file" "ATTACKWB_FRONTEND_CERTS_PATH" "$host_mount_dir/certs"
+    update_env_file "$env_file" "ATTACKWB_RESTAPI_CONFIG_FILE" "$host_mount_dir/configs/rest-api/rest-api-service-config.json"
+    update_env_file "$env_file" "ATTACKWB_RESTAPI_ENV_FILE" "$host_mount_dir/configs/rest-api/.env"
+    update_env_file "$env_file" "ATTACKWB_DB_BACKUP_PATH" "$host_mount_dir/database-backup"
+
+    if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
+        update_env_file "$env_file" "ATTACKWB_TAXII_CONFIG_DIR" "$host_mount_dir/configs/taxii/config"
+    fi
+
+    if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
+        update_env_file "$env_file" "ATTACKWB_GRAFANA_ENV_FILE" "$host_mount_dir/configs/grafana/.env"
+        update_env_file "$env_file" "ATTACKWB_GRAFANA_PROVISIONING_PATH" "$host_mount_dir/configs/grafana/provisioning"
+        update_env_file "$env_file" "ATTACKWB_INSIGHTS_AGENT_ENV_FILE" "$host_mount_dir/configs/insights-agent/.env"
+        update_env_file "$env_file" "ATTACKWB_INSIGHTS_AGENT_SYSTEM_PROMPT_FILE" "$host_mount_dir/configs/insights-agent/system-prompt.md"
+    fi
+
+    if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
+        update_env_file "$env_file" "HOST_CERTS_PATH" "$host_mount_dir/certs"
+        HOST_CERTS_PATH="$host_mount_dir/certs"
+    fi
+
+    success "Container-mounted files synced to $host_mount_dir"
+    echo ""
+}
+
 # Configure custom SSL certificates for REST API
 configure_custom_certificates() {
     CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF=""
     CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF=""
 
     # echo ""
-    info "Custom SSL certificates allow the REST API to trust additional CA certificates."
+    info "Custom SSL certificates allow containerized services to trust additional CA certificates."
     info "This is useful when behind a firewall that performs SSL inspection."
     echo ""
 
@@ -425,6 +540,24 @@ add_taxii_to_compose() {
     echo ""
 }
 
+# Add Grafana and insights-agent services to compose.yaml by inserting before the volumes section
+add_insights_to_compose() {
+    local compose_file="$INSTANCE_DIR/compose.yaml"
+    local insights_template="$DEPLOYMENT_DIR/docker/example-setup/compose.insights.yaml"
+    local temp_file="$INSTANCE_DIR/compose.yaml.tmp"
+
+    info "Adding Grafana and insights-agent services to compose.yaml..."
+
+    sed '/^volumes:/,$d' "$compose_file" > "$temp_file"
+    sed -n '/^services:/,${/^services:/!p;}' "$insights_template" >> "$temp_file"
+    echo "" >> "$temp_file"
+    sed -n '/^volumes:/,$p' "$compose_file" >> "$temp_file"
+    mv "$temp_file" "$compose_file"
+
+    success "Grafana and insights-agent services added to compose.yaml"
+    echo ""
+}
+
 # Verify all required source repositories exist for developer mode
 verify_dev_mode_repos() {
     local parent_dir="$1"
@@ -466,6 +599,7 @@ verify_dev_mode_repos() {
 show_dev_mode_structure() {
     local deployment_dir="$1"
     local enable_taxii="$2"
+    local enable_insights="$3"
 
     # echo ""
     info "Developer mode requires source repositories to be cloned as siblings to the deployment repository."
@@ -479,6 +613,11 @@ show_dev_mode_structure() {
         echo "    └── $REPO_TAXII/"
     fi
     echo ""
+    if [[ $enable_insights =~ ^[Yy]$ ]]; then
+        echo "The insights agent source is maintained in this repository:"
+        echo "  $deployment_dir/insights-agent/"
+        echo ""
+    fi
 }
 
 #===============================================================================
@@ -557,6 +696,51 @@ generate_rest_api_certs_override() {
 EOF
 }
 
+# Generate the insights-agent service override configuration for dev/custom-cert mode
+generate_insights_override() {
+    if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
+        cat << 'EOF'
+
+  grafana:
+    volumes:
+      - ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}:/etc/grafana/certs/${CERTS_FILENAME:-custom-certs.pem}:ro
+    environment:
+      - SSL_CERT_FILE=/etc/grafana/certs/${CERTS_FILENAME:-custom-certs.pem}
+EOF
+    fi
+
+    cat << 'EOF'
+
+  insights-agent:
+EOF
+
+    if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
+        cat << 'EOF'
+    volumes:
+      - ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}:/run/attackwb/custom-ca.pem:ro
+EOF
+    fi
+
+    if [[ $DEV_MODE =~ ^[Yy]$ ]]; then
+        cat << 'EOF'
+    develop:
+      watch:
+        - action: sync+restart
+          path: ../../insights-agent
+          target: /app
+          ignore:
+            - __pycache__/
+            - .venv/
+            - Dockerfile
+            - requirements.txt
+        - action: rebuild
+          path: ../../insights-agent/requirements.txt
+        - action: rebuild
+          path: ../../insights-agent/Dockerfile
+EOF
+    fi
+}
+
 # Generate the TAXII service override configuration for dev mode
 generate_taxii_override() {
     cat << EOF
@@ -602,10 +786,16 @@ EOF
         if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
             generate_taxii_override >> "$override_file"
         fi
+        if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
+            generate_insights_override >> "$override_file"
+        fi
     else
         # Production mode - only add rest-api if custom certs are enabled
         if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
             generate_rest_api_certs_override >> "$override_file"
+            if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
+                generate_insights_override >> "$override_file"
+            fi
         fi
     fi
 
@@ -623,7 +813,14 @@ show_configuration_summary() {
     local override_file="$2"
     local dev_mode="$3"
     local enable_taxii="$4"
-    local enable_custom_certs="$5"
+    local enable_insights="$5"
+    local enable_custom_certs="$6"
+    local host_mount_dir="$7"
+
+    local config_root="$instance_dir"
+    if [[ -n "$host_mount_dir" ]]; then
+        config_root="$host_mount_dir"
+    fi
 
     info "Configuration files:"
     echo "  Main:       $instance_dir/.env"
@@ -631,10 +828,18 @@ show_configuration_summary() {
     if [[ $dev_mode =~ ^[Yy]$ ]] || [[ $enable_custom_certs =~ ^[Yy]$ ]]; then
         echo "  + Override: $override_file"
     fi
-    echo "  REST API:   $instance_dir/configs/rest-api/.env"
-    echo "  REST API:   $instance_dir/configs/rest-api/rest-api-service-config.json"
+    if [[ "$config_root" != "$instance_dir" ]]; then
+        echo "  Mount Dir:  $config_root"
+    fi
+    echo "  REST API:   $config_root/configs/rest-api/.env"
+    echo "  REST API:   $config_root/configs/rest-api/rest-api-service-config.json"
     if [[ $enable_taxii =~ ^[Yy]$ ]]; then
-        echo "  TAXII:      $instance_dir/configs/taxii/config/.env"
+        echo "  TAXII:      $config_root/configs/taxii/config/.env"
+    fi
+    if [[ $enable_insights =~ ^[Yy]$ ]]; then
+        echo "  Grafana:    $config_root/configs/grafana/.env"
+        echo "  Insights:   $config_root/configs/insights-agent/.env"
+        echo "  Prompt:     $config_root/configs/insights-agent/system-prompt.md"
     fi
     echo ""
 }
@@ -664,6 +869,8 @@ show_deployment_instructions() {
     local instance_dir="$1"
     local deployment_dir="$2"
     local dev_mode="$3"
+    local enable_insights="$4"
+    local host_mount_dir="$5"
 
     info "To deploy your instance:"
     echo "  cd $instance_dir"
@@ -679,7 +886,16 @@ show_deployment_instructions() {
 
     info "After deployment, access your Workbench at:"
     echo "  http://localhost"
+    if [[ $enable_insights =~ ^[Yy]$ ]]; then
+        echo "  Grafana: http://localhost:3001"
+    fi
     echo ""
+
+    if [[ -n "$host_mount_dir" && "$host_mount_dir" != "$instance_dir" ]]; then
+        info "Mounted configs and certificates live under:"
+        echo "  $host_mount_dir"
+        echo ""
+    fi
 
     info "For more information, see:"
     echo "  Configuration: $deployment_dir/docs/configuration.md"
@@ -689,7 +905,7 @@ show_deployment_instructions() {
 
 # Display script usage information
 usage() {
-    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxi-server]"
+    echo "Usage: $(basename "$0") [--accept-defaults] [--dev-mode] [--instance-name <name>] [-h | --help] [--mongodb-connection <url>] [--taxii-server] [--insights] [--host-mount-dir <path>]"
     echo
     echo "Generate Docker Compose configurations to deploy local workbench instances."
     echo
@@ -699,7 +915,9 @@ usage() {
     echo "  --instance-name <name>        Name of the generated configuration"
     echo "  -h, --help                    Show this help and exit"
     echo "  --mongodb-connection <url>    MongoDB connection string"
-    echo "  --taxi-server                 Deploy with the TAXII server"
+    echo "  --taxii-server                Deploy with the TAXII server"
+    echo "  --insights                    Deploy with Grafana and the insights agent"
+    echo "  --host-mount-dir <path>       Host directory for files mounted into containers"
     echo "  --ssl-host-certs-path <path>  Host certificates directory path (default \"./certs\")"
     echo "  --ssl-certs-file <file>       Certificates filename (default \"custom-certs.pem\")"
 }
@@ -711,9 +929,11 @@ usage() {
 # Parse optional CLI arguments
 ACCEPT_DEFAULTS=false
 AUTO_ENABLE_TAXII=false
+AUTO_ENABLE_INSIGHTS=false
 AUTO_DEV_MODE=false
 AUTO_INSTANCE_NAME=""
 AUTO_DATABASE_URL=""
+AUTO_HOST_MOUNT_DIR=""
 AUTO_HOST_CERTS_PATH=""
 AUTO_CERTS_FILENAME=""
 while [[ $# -gt 0 ]]; do
@@ -770,6 +990,26 @@ while [[ $# -gt 0 ]]; do
             fi
             shift
             ;;
+        --host-mount-dir)
+            if [[ $# -lt 2 || "${2:-}" == -* ]]; then
+                echo "Error: --host-mount-dir requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            AUTO_HOST_MOUNT_DIR="$2"
+            shift 2
+            ;;
+        --host-mount-dir=*)
+            AUTO_HOST_MOUNT_DIR="${1#*=}"
+            if [[ -z "$AUTO_HOST_MOUNT_DIR" ]]; then
+                echo "Error: --host-mount-dir requires a value." >&2
+                echo ""
+                usage
+                exit 1
+            fi
+            shift
+            ;;
         --ssl-host-certs-path)
             if [[ $# -lt 2 || "${2:-}" == -* ]]; then
                 echo "Error: --ssl-host-certs-path requires a value." >&2
@@ -812,6 +1052,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --taxii-server)
             AUTO_ENABLE_TAXII=true
+            shift
+            ;;
+        --insights)
+            AUTO_ENABLE_INSIGHTS=true
             shift
             ;;
         --)
@@ -940,6 +1184,14 @@ else
     echo ""
 fi
 
+if $AUTO_ENABLE_INSIGHTS; then
+    ENABLE_INSIGHTS="y"
+else
+    prompt_yes_no "Do you want to deploy with Grafana and the insights agent?" "N"
+    ENABLE_INSIGHTS="$PROMPT_YES_NO_RESULT"
+    echo ""
+fi
+
 if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     # Remove TAXII configs if not needed
     if [[ -d "$INSTANCE_DIR/configs/taxii" ]]; then
@@ -947,9 +1199,21 @@ if [[ ! $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     fi
 fi
 
+if [[ ! $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
+    if [[ -d "$INSTANCE_DIR/configs/grafana" ]]; then
+        rm -rf "$INSTANCE_DIR/configs/grafana"
+    fi
+    if [[ -d "$INSTANCE_DIR/configs/insights-agent" ]]; then
+        rm -rf "$INSTANCE_DIR/configs/insights-agent"
+    fi
+fi
+
 #---------------------------------------
 # Environment Configuration
 #---------------------------------------
+
+configure_host_mount_dir
+HOST_MOUNT_DIR="$CONFIGURE_HOST_MOUNT_DIR_REF"
 
 configure_database
 DATABASE_URL="$CONFIGURE_DATABASE_DB_URL_REF"
@@ -957,6 +1221,10 @@ setup_environment_files "$DATABASE_URL"
 
 if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
     add_taxii_to_compose
+fi
+
+if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
+    add_insights_to_compose
 fi
 
 # echo ""
@@ -975,7 +1243,7 @@ else
 fi
 
 if [[ -z "${AUTO_HOST_CERTS_PATH}" && -z "${AUTO_CERTS_FILENAME}" ]]; then
-    prompt_yes_no "Do you want to configure custom SSL certificates for the REST API?" "N"
+    prompt_yes_no "Do you want to configure custom SSL certificates for containerized services?" "N"
     ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
 else 
     ENABLE_CUSTOM_CERTS="y"
@@ -991,12 +1259,14 @@ if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
     CERTS_FILENAME="$CONFIGURE_CUSTOM_CERTIFICATES_CERTS_FILENAME_REF"
 fi
 
+sync_container_mount_files "$INSTANCE_DIR" "$HOST_MOUNT_DIR"
+
 #---------------------------------------
 # Developer Mode Setup
 #---------------------------------------
 
 if [[ $DEV_MODE =~ ^[Yy]$ ]]; then
-    show_dev_mode_structure "$DEPLOYMENT_DIR" "$ENABLE_TAXII"
+    show_dev_mode_structure "$DEPLOYMENT_DIR" "$ENABLE_TAXII" "$ENABLE_INSIGHTS"
     PARENT_DIR="$(dirname "$DEPLOYMENT_DIR")"
     verify_dev_mode_repos "$PARENT_DIR" "$ENABLE_TAXII"
 fi
@@ -1018,10 +1288,8 @@ fi
 # Summary
 #---------------------------------------
 
-show_configuration_summary "$INSTANCE_DIR" "$OVERRIDE_FILE" "$DEV_MODE" "$ENABLE_TAXII" "$ENABLE_CUSTOM_CERTS"
-
+show_configuration_summary "$INSTANCE_DIR" "$OVERRIDE_FILE" "$DEV_MODE" "$ENABLE_TAXII" "$ENABLE_INSIGHTS" "$ENABLE_CUSTOM_CERTS" "$HOST_MOUNT_DIR"
 if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
     show_certificate_info "$INSTANCE_DIR" "$HOST_CERTS_PATH" "$CERTS_FILENAME"
 fi
-
-show_deployment_instructions "$INSTANCE_DIR" "$DEPLOYMENT_DIR" "$DEV_MODE"
+show_deployment_instructions "$INSTANCE_DIR" "$DEPLOYMENT_DIR" "$DEV_MODE" "$ENABLE_INSIGHTS" "$HOST_MOUNT_DIR"

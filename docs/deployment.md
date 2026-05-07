@@ -4,6 +4,22 @@
 
 The ATT&CK Workbench can be deployed using Docker Compose with two different configurations:
 
+The easiest way to generate a deployment-ready instance is with
+`docker/setup-workbench.sh`, which can also enable optional services such as
+TAXII, Grafana, and the insights agent:
+
+```bash
+./docker/setup-workbench.sh --instance-name my-workbench --insights
+```
+
+If your environment requires mounted files to live under a dedicated host
+directory, generate the instance with:
+
+```bash
+./docker/setup-workbench.sh --instance-name my-workbench --insights \
+  --host-mount-dir /Users/Shared/Docker/my-workbench
+```
+
 ### 1. Using Pre-built Images (Recommended)
 
 Use `compose.yaml` to pull pre-built images directly from GitHub Container Registry (GHCR):

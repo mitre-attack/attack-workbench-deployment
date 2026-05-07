@@ -1,0 +1,47 @@
+services:
+
+  grafana:
+    image: grafana/grafana-oss:${ATTACKWB_GRAFANA_VERSION:-latest}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "${ATTACKWB_GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - "${ATTACKWB_GRAFANA_PROVISIONING_PATH:-./configs/grafana/provisioning}:/etc/grafana/provisioning:ro"
+    env_file:
+      - "${ATTACKWB_GRAFANA_ENV_FILE:-./configs/grafana/.env}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  insights-agent:
+    image: attack-workbench-insights-agent
+    build: ../../insights-agent
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    volumes:
+      - "${ATTACKWB_INSIGHTS_AGENT_SYSTEM_PROMPT_FILE:-../../insights-agent/system-prompt.md}:/app/config/system-prompt.md:ro"
+    env_file:
+      - "${ATTACKWB_INSIGHTS_AGENT_ENV_FILE:-./configs/insights-agent/.env}"
+    environment:
+      - ATTACKWB_CUSTOM_CA_CERT=/run/attackwb/custom-ca.pem
+      - SYSTEM_PROMPT_PATH=/app/config/system-prompt.md
+    restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -60,3 +60,4 @@ services:
 
 volumes:
   workspace-data:
+  grafana-data:
