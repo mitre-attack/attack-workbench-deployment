@@ -174,12 +174,28 @@ prompt_non_empty() {
     done
 }
 
+# Expand shell-style home directory paths after they have been read into variables.
+# Usage: expand_user_path "~/path"
+expand_user_path() {
+    local input_path="$1"
+
+    if [[ "$input_path" == "~" ]]; then
+        echo "$HOME"
+    elif [[ "$input_path" == "~/"* ]]; then
+        echo "$HOME/${input_path#"~/"}"
+    else
+        echo "$input_path"
+    fi
+}
+
 # Resolve a path to an absolute path, using a base directory for relative inputs
 # Usage: resolve_absolute_path "./relative/path" "/base/dir"
 resolve_absolute_path() {
     local input_path="$1"
     local base_dir="$2"
     local resolved_path=""
+
+    input_path="$(expand_user_path "$input_path")"
 
     if [[ "$input_path" == /* ]]; then
         resolved_path="$input_path"
@@ -212,6 +228,28 @@ update_env_file() {
     else
         echo "${key}=${value}" >> "$env_file"
     fi
+}
+
+# Copy a file into a bind-mounted file target, removing stale Docker-created
+# directories that can appear when a missing file bind source is started.
+copy_mount_file() {
+    local source_file="$1"
+    local target_file="$2"
+    local target_dir
+    local target_name
+
+    target_dir="$(dirname "$target_file")"
+    target_name="$(basename "$target_file")"
+    mkdir -p "$target_dir"
+
+    if [[ -d "$target_file" ]]; then
+        warning "Found a directory where a file mount target should be: $target_file"
+        warning "Removing stale Docker-created directory: $target_file"
+        rm -rf -- "$target_file"
+    fi
+
+    find "$target_dir" -maxdepth 1 -type d -name "${target_name}.stale-dir-*" -exec rm -rf -- {} +
+    cp "$source_file" "$target_file"
 }
 
 # Check if a repository exists in parent directory
@@ -450,6 +488,18 @@ sync_container_mount_files() {
         cp -R "$source_instance_dir/certs/." "$host_mount_dir/certs/"
     fi
 
+    if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
+        local custom_certs_path
+        custom_certs_path="$(resolve_absolute_path "$HOST_CERTS_PATH" "$source_instance_dir")"
+        local custom_cert_file="$custom_certs_path/$CERTS_FILENAME"
+        if [[ -f "$custom_cert_file" ]]; then
+            copy_mount_file "$custom_cert_file" "$host_mount_dir/certs/$CERTS_FILENAME"
+        else
+            warning "Custom certificate file not found: $custom_cert_file"
+            warning "Place it at $host_mount_dir/certs/$CERTS_FILENAME before starting Docker Compose."
+        fi
+    fi
+
     if [[ -d "$source_instance_dir/database-backup" ]]; then
         cp -R "$source_instance_dir/database-backup/." "$host_mount_dir/database-backup/"
     fi
@@ -496,6 +546,7 @@ configure_custom_certificates() {
     else
         CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF="${AUTO_HOST_CERTS_PATH}"
     fi
+    CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF="$(expand_user_path "$CONFIGURE_CUSTOM_CERTIFICATES_HOST_CERTS_REF")"
 
     if [[ -z "${AUTO_CERTS_FILENAME}" ]]; then
         read -p "Enter certificate filename [custom-certs.pem]: " user_certs_filename
@@ -703,9 +754,14 @@ generate_insights_override() {
 
   grafana:
     volumes:
-      - ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}:/etc/grafana/certs/${CERTS_FILENAME:-custom-certs.pem}:ro
+      - type: bind
+        source: ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}
+        target: /etc/ssl/certs/ca-certificates.crt
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
-      - SSL_CERT_FILE=/etc/grafana/certs/${CERTS_FILENAME:-custom-certs.pem}
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 EOF
     fi
 
@@ -717,7 +773,12 @@ EOF
     if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
         cat << 'EOF'
     volumes:
-      - ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}:/run/attackwb/custom-ca.pem:ro
+      - type: bind
+        source: ${HOST_CERTS_PATH:-./certs}/${CERTS_FILENAME:-custom-certs.pem}
+        target: /run/attackwb/custom-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
 EOF
     fi
 
