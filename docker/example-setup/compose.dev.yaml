@@ -2,53 +2,86 @@ services:
 
   frontend:
     image: attack-workbench-frontend
-    build: ../../../attack-workbench-frontend
+    build:
+      context: ../../../attack-workbench-frontend
+      target: dev
+    volumes: !override
+      - frontend_src:/workspace/src
     develop:
       watch:
         # Sync source files for hot-reload
         - action: sync
           path: ../../../attack-workbench-frontend/src
-          target: /app/src
-          ignore:
-            - node_modules/
+          target: /workspace/src
+          initial_sync: true
+        # Rebuild on Angular build configuration changes
+        - action: rebuild
+          path: ../../../attack-workbench-frontend/angular.json
+        - action: rebuild
+          path: ../../../attack-workbench-frontend/tsconfig.json
+        - action: rebuild
+          path: ../../../attack-workbench-frontend/tsconfig.app.json
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../attack-workbench-frontend/package.json
+        - action: rebuild
+          path: ../../../attack-workbench-frontend/package-lock.json
 
   rest-api:
     image: attack-workbench-rest-api
-    build: ../../../attack-workbench-rest-api
+    build:
+      context: ../../../attack-workbench-rest-api
+      target: dev
+    volumes: !override
+      - rest_api_app:/usr/src/app/app
+      - rest_api_bin:/usr/src/app/bin
+      - rest_api_resources:/usr/src/app/resources
     develop:
       watch:
         # Sync app source files
         - action: sync
           path: ../../../attack-workbench-rest-api/app
           target: /usr/src/app/app
-          ignore:
-            - node_modules/
-        # Restart on config changes
+          initial_sync: true
+        # Sync server entrypoint and config files
+        - action: sync
+          path: ../../../attack-workbench-rest-api/bin
+          target: /usr/src/app/bin
+          initial_sync: true
+        # Sync generated runtime config file from this compose instance
         - action: sync+restart
-          path: ../../../attack-workbench-rest-api/resources
-          target: /usr/src/app/resources
+          path: ./configs/rest-api/rest-api-service-config.json
+          target: /usr/src/app/resources/rest-api-service-config.json
+          initial_sync: true
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../attack-workbench-rest-api/package.json
+        - action: rebuild
+          path: ../../../attack-workbench-rest-api/package-lock.json
 
   taxii:
     image: attack-workbench-taxii-server
-    build: ../../../attack-workbench-taxii-server
+    build:
+      context: ../../../attack-workbench-taxii-server
+      target: development
+    volumes:
+      - taxii_src:/app/src
     develop:
       watch:
         # Sync source files
         - action: sync
-          path: ../../../attack-workbench-taxii-server/taxii
-          target: /app/taxii
-          ignore:
-            - node_modules/
-        # Sync config files and restart
-        - action: sync+restart
-          path: ../../../attack-workbench-taxii-server/config
-          target: /app/config
+          path: ../../../attack-workbench-taxii-server/src
+          target: /app/src
+          initial_sync: true
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../attack-workbench-taxii-server/package.json
+        - action: rebuild
+          path: ../../../attack-workbench-taxii-server/package-lock.json
+
+volumes:
+  frontend_src:
+  rest_api_app:
+  rest_api_bin:
+  rest_api_resources:
+  taxii_src:
