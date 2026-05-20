@@ -681,18 +681,30 @@ generate_frontend_override() {
 
   frontend:
     image: $REPO_FRONTEND
-    build: ../../../$REPO_FRONTEND
+    build:
+      context: ../../../$REPO_FRONTEND
+      target: dev
+    volumes: !override
+      - frontend_src:/workspace/src
     develop:
       watch:
         # Sync source files for hot-reload
         - action: sync
           path: ../../../$REPO_FRONTEND/src
-          target: /app/src
-          ignore:
-            - node_modules/
+          target: /workspace/src
+          initial_sync: true
+        # Rebuild on Angular build configuration changes
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/angular.json
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/tsconfig.json
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/tsconfig.app.json
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../$REPO_FRONTEND/package.json
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/package-lock.json
 EOF
 }
 
@@ -702,16 +714,28 @@ generate_rest_api_dev_override() {
 
   rest-api:
     image: $REPO_REST_API
-    build: ../../../$REPO_REST_API
+    build:
+      context: ../../../$REPO_REST_API
+      target: dev
 EOF
 
     # Add custom cert volumes if enabled
     if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
         cat << 'EOF'
-    volumes:
+    volumes: !override
+      - rest_api_app:/usr/src/app/app
+      - rest_api_bin:/usr/src/app/bin
+      - rest_api_resources:/usr/src/app/resources
       - ${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
     environment:
       - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME:-custom-certs.pem}
+EOF
+    else
+        cat << 'EOF'
+    volumes: !override
+      - rest_api_app:/usr/src/app/app
+      - rest_api_bin:/usr/src/app/bin
+      - rest_api_resources:/usr/src/app/resources
 EOF
     fi
 
@@ -723,15 +747,22 @@ EOF
         - action: sync
           path: ../../../$REPO_REST_API/app
           target: /usr/src/app/app
-          ignore:
-            - node_modules/
-        # Restart on config changes
+          initial_sync: true
+        # Sync server entrypoint and config files
+        - action: sync
+          path: ../../../$REPO_REST_API/bin
+          target: /usr/src/app/bin
+          initial_sync: true
+        # Sync generated runtime config file from this compose instance
         - action: sync+restart
-          path: ../../../$REPO_REST_API/resources
-          target: /usr/src/app/resources
+          path: ./configs/rest-api/rest-api-service-config.json
+          target: /usr/src/app/resources/rest-api-service-config.json
+          initial_sync: true
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../$REPO_REST_API/package.json
+        - action: rebuild
+          path: ../../../$REPO_REST_API/package-lock.json
 EOF
 }
 
@@ -808,22 +839,23 @@ generate_taxii_override() {
 
   taxii:
     image: $REPO_TAXII
-    build: ../../../$REPO_TAXII
+    build:
+      context: ../../../$REPO_TAXII
+      target: development
+    volumes:
+      - taxii_src:/app/src
     develop:
       watch:
         # Sync source files
         - action: sync
-          path: ../../../$REPO_TAXII/taxii
-          target: /app/taxii
-          ignore:
-            - node_modules/
-        # Sync config files and restart
-        - action: sync+restart
-          path: ../../../$REPO_TAXII/config
-          target: /app/config
+          path: ../../../$REPO_TAXII/src
+          target: /app/src
+          initial_sync: true
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../$REPO_TAXII/package.json
+        - action: rebuild
+          path: ../../../$REPO_TAXII/package-lock.json
 EOF
 }
 
@@ -849,6 +881,21 @@ EOF
         fi
         if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
             generate_insights_override >> "$override_file"
+        fi
+
+        cat >> "$override_file" << 'EOF'
+
+volumes:
+  frontend_src:
+  rest_api_app:
+  rest_api_bin:
+  rest_api_resources:
+EOF
+
+        if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
+            cat >> "$override_file" << 'EOF'
+  taxii_src:
+EOF
         fi
     else
         # Production mode - only add rest-api if custom certs are enabled
@@ -895,7 +942,7 @@ show_configuration_summary() {
     echo "  REST API:   $config_root/configs/rest-api/.env"
     echo "  REST API:   $config_root/configs/rest-api/rest-api-service-config.json"
     if [[ $enable_taxii =~ ^[Yy]$ ]]; then
-        echo "  TAXII:      $config_root/configs/taxii/config/.env"
+        echo "  TAXII:      $config_root/configs/taxii/config/dev.env"
     fi
     if [[ $enable_insights =~ ^[Yy]$ ]]; then
         echo "  Grafana:    $config_root/configs/grafana/.env"
@@ -936,9 +983,12 @@ show_deployment_instructions() {
     info "To deploy your instance:"
     echo "  cd $instance_dir"
     if [[ $dev_mode =~ ^[Yy]$ ]]; then
+        echo "  docker compose up --watch --build"
+        echo ""
+        info "For detached developer mode without active watching:"
         echo "  docker compose up -d --build"
         echo ""
-        info "For hot-reloading in developer mode, use watch:"
+        info "To start watching an already-running developer-mode stack:"
         echo "  docker compose watch"
     else
         echo "  docker compose up -d"
