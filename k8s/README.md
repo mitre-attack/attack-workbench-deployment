@@ -77,6 +77,25 @@ To customize the deployment for your environment:
 3. **Resources**: Adjust CPU/memory limits in deployment files
 4. **Configuration**: Update ConfigMaps for service-specific settings
 
+### REST API Secrets
+
+The REST API reads sensitive settings from `base/secret-rest-api.yaml`. Do not
+set optional secret keys to empty strings. An empty string is still passed to the
+container as an environment variable and overrides the REST API's generated
+startup defaults.
+
+For local and development deployments, leave optional keys such as
+`SESSION_SECRET`, `MONGOSTORE_CRYPTO_SECRET`, and
+`WB_REST_TOKEN_SIGNING_SECRET` absent. For production, set non-empty stable
+values through an overlay or external secret manager so sessions and service
+tokens remain valid across restarts and multiple replicas.
+
+Generate suitable random values with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
 ## Accessing Services
 
 ### Port Forward for Development
