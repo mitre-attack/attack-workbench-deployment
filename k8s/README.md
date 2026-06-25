@@ -129,7 +129,7 @@ kubectl create job --from=cronjob/mongodb-backup manual-backup -n attack-workben
 
 ```bash
 # Update images
-kubectl set image deployment/prod-frontend frontend=ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:v1.2.3 -n attack-workbench
+kubectl set image deployment/prod-frontend frontend=ghcr.io/mitre-attack/attack-workbench-frontend:v1.2.3 -n attack-workbench
 
 # Or redeploy with updated manifests
 kubectl apply -k k8s/overlays/prod

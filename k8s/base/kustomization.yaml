@@ -18,9 +18,9 @@ commonLabels:
   app.kubernetes.io/part-of: attack-workbench
 
 images:
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend
+- name: ghcr.io/mitre-attack/attack-workbench-frontend
   newTag: latest
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api
+- name: ghcr.io/mitre-attack/attack-workbench-rest-api
   newTag: latest
 - name: ghcr.io/mitre-attack/attack-workbench-taxii-server
   newTag: latest

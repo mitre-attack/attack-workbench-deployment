@@ -1,7 +1,7 @@
 services:
 
   frontend:
-    image: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:${ATTACKWB_FRONTEND_VERSION:-latest}
+    image: ghcr.io/mitre-attack/attack-workbench-frontend:${ATTACKWB_FRONTEND_VERSION:-latest}
     depends_on:
       - rest-api
     ports:
@@ -18,7 +18,7 @@ services:
         max-file: "5"
 
   rest-api:
-    image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:${ATTACKWB_RESTAPI_VERSION:-latest}
+    image: ghcr.io/mitre-attack/attack-workbench-rest-api:${ATTACKWB_RESTAPI_VERSION:-latest}
     depends_on:
       - mongodb
     ports:

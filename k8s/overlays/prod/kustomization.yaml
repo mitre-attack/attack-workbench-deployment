@@ -23,9 +23,9 @@ replicas:
   count: 1
 
 images:
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend
+- name: ghcr.io/mitre-attack/attack-workbench-frontend
   newTag: stable
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api
+- name: ghcr.io/mitre-attack/attack-workbench-rest-api
   newTag: stable
 - name: ghcr.io/mitre-attack/attack-workbench-taxii-server
   newTag: stable

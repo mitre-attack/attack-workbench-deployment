@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend:latest
+        image: ghcr.io/mitre-attack/attack-workbench-frontend:latest
         ports:
         - containerPort: 80
         volumeMounts:

@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
       - name: rest-api
-        image: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api:latest
+        image: ghcr.io/mitre-attack/attack-workbench-rest-api:latest
         ports:
         - containerPort: 3000
         envFrom:

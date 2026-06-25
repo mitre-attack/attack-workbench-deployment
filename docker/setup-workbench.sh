@@ -20,7 +20,7 @@
 #===============================================================================
 
 readonly DEPLOYMENT_REPO_URL="https://github.com/mitre-attack/attack-workbench-deployment.git"
-readonly CTID_GITHUB_ORG="https://github.com/center-for-threat-informed-defense"
+readonly CTID_GITHUB_ORG="https://github.com/mitre-attack"
 readonly MITRE_GITHUB_ORG="https://github.com/mitre-attack"
 
 readonly REPO_FRONTEND="attack-workbench-frontend"
