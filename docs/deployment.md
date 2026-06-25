@@ -52,8 +52,8 @@ docker compose -f compose.yaml -f compose.dev.yaml down
 
 **Note**: When building from source, you need the following three source repositories to be available as sibling directories to this deployment repository:
 
-- [attack-workbench-frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/)
-- [attack-workbench-rest-api](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/)
+- [attack-workbench-frontend](https://github.com/mitre-attack/attack-workbench-frontend/)
+- [attack-workbench-rest-api](https://github.com/mitre-attack/attack-workbench-rest-api/)
 - [attack-workbench-taxii-server](https://github.com/mitre-attack/attack-workbench-taxii-server)
 
 The directory structure should look like this:

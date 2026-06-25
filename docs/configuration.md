@@ -103,7 +103,7 @@ Each service has its own configuration directory:
 
 The frontend container is an Nginx instance which serves the frontend SPA and reverse proxies requests to the backend REST API.
 We provide a basic `nginx.conf` template in the aforementioned directory that should get you started.
-Refer to the [frontend documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
+Refer to the [frontend documentation](https://github.com/mitre-attack/attack-workbench-frontend)
 for further details on customizing the Workbench frontend.
 
 ### REST API
@@ -112,7 +112,7 @@ for further details on customizing the Workbench frontend.
 
 The backend REST API loads runtime configurations from environment variables, as well as from a JSON configuration file.
 Templates are provided in the aforementioned directory.
-Refer to the [REST API usage documentation](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api/blob/main/USAGE.md#configuration)
+Refer to the [REST API usage documentation](https://github.com/mitre-attack/attack-workbench-rest-api/blob/main/USAGE.md#configuration)
 for further details on customizing the backend.
 
 **Important**: For production deployments, set the following environment variables in your `.env` file to ensure persistent secrets across server restarts:
