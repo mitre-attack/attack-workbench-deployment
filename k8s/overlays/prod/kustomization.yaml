@@ -4,28 +4,33 @@ kind: Kustomization
 resources:
 - ../../base
 
-namePrefix: prod-
+components:
+- ../../components/taxii
 
-commonLabels:
-  environment: prod
+labels:
+- pairs:
+    environment: prod
+  includeSelectors: false
 
-patchesStrategicMerge:
-- configmap-rest-api-prod.yaml
-- configmap-taxii-prod.yaml
-- deployment-patches.yaml
+# Pin to specific release tags for production
+images:
+- name: ghcr.io/mitre-attack/attack-workbench-frontend
+  newTag: latest
+- name: ghcr.io/mitre-attack/attack-workbench-rest-api
+  newTag: latest
+- name: ghcr.io/mitre-attack/attack-workbench-taxii-server
+  newTag: latest
+
+patches:
+- path: patch-resources.yaml
+- path: patch-rest-api-env.yaml
+- target:
+    kind: Ingress
+    name: attack-workbench-ingress
+  path: patch-ingress.yaml
 
 replicas:
 - name: frontend
   count: 2
 - name: rest-api
   count: 2
-- name: taxii
-  count: 1
-
-images:
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-frontend
-  newTag: stable
-- name: ghcr.io/center-for-threat-informed-defense/attack-workbench-rest-api
-  newTag: stable
-- name: ghcr.io/mitre-attack/attack-workbench-taxii-server
-  newTag: stable

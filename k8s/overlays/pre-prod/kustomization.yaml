@@ -4,19 +4,20 @@ kind: Kustomization
 resources:
 - ../../base
 
-# Uncomment to include TAXII:
-# components:
-# - ../../components/taxii
+components:
+- ../../components/taxii
 
 labels:
 - pairs:
-    environment: dev
+    environment: pre-prod
   includeSelectors: false
 
 images:
 - name: ghcr.io/mitre-attack/attack-workbench-frontend
   newTag: latest
 - name: ghcr.io/mitre-attack/attack-workbench-rest-api
+  newTag: latest
+- name: ghcr.io/mitre-attack/attack-workbench-taxii-server
   newTag: latest
 
 patches:

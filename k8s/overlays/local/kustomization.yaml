@@ -4,20 +4,14 @@ kind: Kustomization
 resources:
 - ../../base
 
-# Uncomment to include TAXII:
+# Uncomment to include TAXII for local testing:
 # components:
 # - ../../components/taxii
 
 labels:
 - pairs:
-    environment: dev
+    environment: local
   includeSelectors: false
-
-images:
-- name: ghcr.io/mitre-attack/attack-workbench-frontend
-  newTag: latest
-- name: ghcr.io/mitre-attack/attack-workbench-rest-api
-  newTag: latest
 
 patches:
 - path: patch-resources.yaml
@@ -26,9 +20,3 @@ patches:
     kind: Ingress
     name: attack-workbench-ingress
   path: patch-ingress.yaml
-
-replicas:
-- name: frontend
-  count: 1
-- name: rest-api
-  count: 1

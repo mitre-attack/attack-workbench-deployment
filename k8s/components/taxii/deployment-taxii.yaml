@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taxii
+  labels:
+    app.kubernetes.io/name: taxii
+    app.kubernetes.io/component: taxii-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taxii
+      app.kubernetes.io/component: taxii-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taxii
+        app.kubernetes.io/component: taxii-server
+    spec:
+      containers:
+      - name: taxii
+        image: ghcr.io/mitre-attack/attack-workbench-taxii-server:latest
+        ports:
+        - name: http
+          containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: taxii-config
+        - secretRef:
+            name: taxii-secrets
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+          periodSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"

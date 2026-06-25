@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rest-api-env
+data:
+  NODE_ENV: "development"
+  LOG_LEVEL: "debug"
+  AUTHN_MECHANISM: "anonymous"
+  CORS_ALLOWED_ORIGINS: "*"

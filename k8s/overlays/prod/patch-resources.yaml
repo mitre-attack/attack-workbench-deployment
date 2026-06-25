@@ -1,6 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: frontend
+spec:
+  template:
+    spec:
+      containers:
+      - name: frontend
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: rest-api
 spec:
   template:
@@ -16,21 +33,21 @@ spec:
             cpu: "1000m"
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: frontend
+  name: mongodb
 spec:
   template:
     spec:
       containers:
-      - name: frontend
+      - name: mongodb
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "200m"
-          limits:
             memory: "1Gi"
             cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
 ---
 apiVersion: apps/v1
 kind: Deployment
