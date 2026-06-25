@@ -8,8 +8,8 @@ This document outlines the development and release process for the ATT&CK Workbe
 
 This process applies to all ATT&CK Workbench ecosystem projects:
 
-- [ATT&CK Workbench Frontend](https://github.com/center-for-threat-informed-defense/attack-workbench-frontend)
-- [ATT&CK Workbench REST API](https://github.com/center-for-threat-informed-defense/attack-workbench-rest-api)
+- [ATT&CK Workbench Frontend](https://github.com/mitre-attack/attack-workbench-frontend)
+- [ATT&CK Workbench REST API](https://github.com/mitre-attack/attack-workbench-rest-api)
 - [ATT&CK Workbench TAXII 2.1 Server](https://github.com/mitre-attack/attack-workbench-taxii-server)
 - [ATT&CK Data Model](https://github.com/mitre-attack/attack-data-model)
 
