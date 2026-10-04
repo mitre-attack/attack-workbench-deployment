@@ -57,6 +57,10 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
 
 volumes:
   workspace-data:
