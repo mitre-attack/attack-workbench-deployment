@@ -430,6 +430,12 @@ setup_environment_files() {
         success "Created $INSTANCE_DIR/.env"
     fi
 
+    # Frontend .env file
+    if [[ -f "$INSTANCE_DIR/configs/frontend/template.env" ]]; then
+        mv "$INSTANCE_DIR/configs/frontend/template.env" "$INSTANCE_DIR/configs/frontend/.env"
+        success "Created $INSTANCE_DIR/configs/frontend/.env"
+    fi
+
     # REST API .env file
     if [[ -f "$INSTANCE_DIR/configs/rest-api/template.env" ]]; then
         local rest_api_env="$INSTANCE_DIR/configs/rest-api/.env"
@@ -462,7 +468,7 @@ setup_environment_files() {
         mv "$INSTANCE_DIR/configs/taxii/config/template.env" "$INSTANCE_DIR/configs/taxii/config/dev.env"
         success "Created $INSTANCE_DIR/configs/taxii/config/dev.env"
     fi
-    
+
     echo ""
 }
 
@@ -472,13 +478,13 @@ sync_container_mount_files() {
     local host_mount_dir="$2"
     local env_file="$source_instance_dir/.env"
 
+    mkdir -p "$host_mount_dir/configs" "$host_mount_dir/certs" "$host_mount_dir/database-backup"
+
     if [[ "$host_mount_dir" == "$source_instance_dir" ]]; then
         return
     fi
 
     info "Syncing container-mounted files to: $host_mount_dir"
-
-    mkdir -p "$host_mount_dir/configs" "$host_mount_dir/certs" "$host_mount_dir/database-backup"
 
     if [[ -d "$source_instance_dir/configs" ]]; then
         cp -R "$source_instance_dir/configs/." "$host_mount_dir/configs/"
@@ -505,6 +511,8 @@ sync_container_mount_files() {
     fi
 
     update_env_file "$env_file" "ATTACKWB_FRONTEND_NGINX_CONFIG_FILE" "$host_mount_dir/configs/frontend/nginx.api.conf"
+    update_env_file "$env_file" "ATTACKWB_FRONTEND_ENV_FILE" "$host_mount_dir/configs/frontend/.env"
+    update_env_file "$env_file" "ATTACKWB_FRONTEND_CONFIG_DIR" "$host_mount_dir/configs/frontend"
     update_env_file "$env_file" "ATTACKWB_FRONTEND_CERTS_PATH" "$host_mount_dir/certs"
     update_env_file "$env_file" "ATTACKWB_RESTAPI_CONFIG_FILE" "$host_mount_dir/configs/rest-api/rest-api-service-config.json"
     update_env_file "$env_file" "ATTACKWB_RESTAPI_ENV_FILE" "$host_mount_dir/configs/rest-api/.env"
@@ -684,18 +692,37 @@ generate_frontend_override() {
     build:
       context: ../../../$REPO_FRONTEND
       target: dev
+    environment:
+      - WORKBENCH_FRONTEND_API_PROXY_TARGET=http://rest-api:3000
+    ports: !override
+      - "\${ATTACKWB_FRONTEND_HTTP_PORT:-80}:80"
     volumes: !override
-      - frontend_src:/workspace/src
+      - "\${ATTACKWB_FRONTEND_CONFIG_DIR:-./configs/frontend}:/etc/workbench:ro"
+      - type: bind
+        source: ../../../$REPO_FRONTEND/src
+        target: /workspace/src
+        read_only: true
+        bind:
+          create_host_path: false
     develop:
       watch:
-        # Sync source files for hot-reload
-        - action: sync
-          path: ../../../$REPO_FRONTEND/src
-          target: /workspace/src
-          initial_sync: true
+        # Angular polls source; restart it to discover newly added static assets.
+        - action: restart
+          path: ../../../$REPO_FRONTEND/src/assets
+        - action: restart
+          # Watch the directory so adding/removing optional config.json is detected.
+          path: \${ATTACKWB_FRONTEND_CONFIG_DIR:-./configs/frontend}
+          ignore:
+            - .env
+            - template.env
+            - '*.conf'
         # Rebuild on Angular build configuration changes
         - action: rebuild
           path: ../../../$REPO_FRONTEND/angular.json
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/proxy.conf.cjs
+        - action: rebuild
+          path: ../../../$REPO_FRONTEND/scripts
         - action: rebuild
           path: ../../../$REPO_FRONTEND/tsconfig.json
         - action: rebuild
@@ -719,23 +746,27 @@ generate_rest_api_dev_override() {
       target: dev
 EOF
 
-    # Add custom cert volumes if enabled
+    cat << EOF
+    volumes:
+      - type: bind
+        source: ../../../$REPO_REST_API/app
+        target: /usr/src/app/app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../../$REPO_REST_API/bin
+        target: /usr/src/app/bin
+        read_only: true
+        bind:
+          create_host_path: false
+EOF
+
     if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
         cat << 'EOF'
-    volumes: !override
-      - rest_api_app:/usr/src/app/app
-      - rest_api_bin:/usr/src/app/bin
-      - rest_api_resources:/usr/src/app/resources
       - ${HOST_CERTS_PATH:-./certs}:/usr/src/app/certs
     environment:
       - NODE_EXTRA_CA_CERTS=./certs/${CERTS_FILENAME:-custom-certs.pem}
-EOF
-    else
-        cat << 'EOF'
-    volumes: !override
-      - rest_api_app:/usr/src/app/app
-      - rest_api_bin:/usr/src/app/bin
-      - rest_api_resources:/usr/src/app/resources
 EOF
     fi
 
@@ -743,21 +774,15 @@ EOF
     cat << EOF
     develop:
       watch:
-        # Sync app source files
-        - action: sync
+        # Restart the API to load edits from its source mounts
+        - action: restart
           path: ../../../$REPO_REST_API/app
-          target: /usr/src/app/app
-          initial_sync: true
-        # Sync server entrypoint and config files
-        - action: sync
+        # Restart after server entrypoint and config changes
+        - action: restart
           path: ../../../$REPO_REST_API/bin
-          target: /usr/src/app/bin
-          initial_sync: true
-        # Sync generated runtime config file from this compose instance
-        - action: sync+restart
-          path: ./configs/rest-api/rest-api-service-config.json
-          target: /usr/src/app/resources/rest-api-service-config.json
-          initial_sync: true
+        # The base compose file mounts this config before the API starts.
+        - action: restart
+          path: \${ATTACKWB_RESTAPI_CONFIG_FILE:-./configs/rest-api/rest-api-service-config.json}
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../$REPO_REST_API/package.json
@@ -843,28 +868,39 @@ generate_taxii_override() {
       context: ../../../$REPO_TAXII
       target: development
     volumes:
-      - taxii_src:/app/src
+      - type: bind
+        source: ../../../$REPO_TAXII/src
+        target: /app/src
+        read_only: true
+        bind:
+          create_host_path: false
     develop:
       watch:
-        # Sync source files
-        - action: sync
+        # Rebuild TypeScript and restart both TAXII server and collector
+        - action: restart
           path: ../../../$REPO_TAXII/src
-          target: /app/src
-          initial_sync: true
         # Rebuild on package.json changes
         - action: rebuild
           path: ../../../$REPO_TAXII/package.json
         - action: rebuild
           path: ../../../$REPO_TAXII/package-lock.json
+        # Rebuild when Nest or TypeScript build configuration changes
+        - action: rebuild
+          path: ../../../$REPO_TAXII/nest-cli.json
+        - action: rebuild
+          path: ../../../$REPO_TAXII/ecosystem.config.js
+        - action: rebuild
+          path: ../../../$REPO_TAXII/tsconfig.json
+        - action: rebuild
+          path: ../../../$REPO_TAXII/tsconfig.build.json
 EOF
 }
 
 # Generate the complete compose.override.yaml file
-generate_compose_override() {
-    local override_file="$1"
+render_compose_override() {
 
     # Write header
-    cat > "$override_file" << 'EOF'
+    cat << 'EOF'
 # This file was generated by setup-workbench.sh
 # It will be automatically merged with compose.yaml when running docker compose commands
 
@@ -873,42 +909,30 @@ EOF
 
     # Add service configurations based on mode
     if [[ $DEV_MODE =~ ^[Yy]$ ]]; then
-        generate_frontend_override >> "$override_file"
-        generate_rest_api_dev_override >> "$override_file"
+        generate_frontend_override
+        generate_rest_api_dev_override
 
         if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
-            generate_taxii_override >> "$override_file"
+            generate_taxii_override
         fi
         if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
-            generate_insights_override >> "$override_file"
+            generate_insights_override
         fi
 
-        cat >> "$override_file" << 'EOF'
-
-volumes:
-  frontend_src:
-  rest_api_app:
-  rest_api_bin:
-  rest_api_resources:
-EOF
-
-        if [[ $ENABLE_TAXII =~ ^[Yy]$ ]]; then
-            cat >> "$override_file" << 'EOF'
-  taxii_src:
-EOF
-        fi
     else
         # Production mode - only add rest-api if custom certs are enabled
         if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
-            generate_rest_api_certs_override >> "$override_file"
+            generate_rest_api_certs_override
             if [[ $ENABLE_INSIGHTS =~ ^[Yy]$ ]]; then
-                generate_insights_override >> "$override_file"
+                generate_insights_override
             fi
         fi
     fi
 
-    # Add newline at end
-    echo "" >> "$override_file"
+}
+
+generate_compose_override() {
+    render_compose_override > "$1"
 }
 
 #===============================================================================
@@ -939,6 +963,8 @@ show_configuration_summary() {
     if [[ "$config_root" != "$instance_dir" ]]; then
         echo "  Mount Dir:  $config_root"
     fi
+    echo "  Frontend:   $config_root/configs/frontend/.env"
+    echo "  Frontend:   $config_root/configs/frontend/config.json"
     echo "  REST API:   $config_root/configs/rest-api/.env"
     echo "  REST API:   $config_root/configs/rest-api/rest-api-service-config.json"
     if [[ $enable_taxii =~ ^[Yy]$ ]]; then
@@ -950,6 +976,47 @@ show_configuration_summary() {
         echo "  Prompt:     $config_root/configs/insights-agent/system-prompt.md"
     fi
     echo ""
+}
+
+# Display the equivalent non-interactive setup command
+show_recreation_command() {
+    local deployment_dir="$1"
+    local instance_name="$2"
+    local database_url="$3"
+    local host_mount_dir="$4"
+    local dev_mode="$5"
+    local enable_taxii="$6"
+    local enable_insights="$7"
+    local enable_custom_certs="$8"
+    local host_certs_path="$9"
+    local certs_filename="${10}"
+
+    local -a command=(
+        "$deployment_dir/docker/setup-workbench.sh"
+        "--accept-defaults"
+        "--instance-name" "$instance_name"
+        "--mongodb-connection" "$database_url"
+        "--host-mount-dir" "$host_mount_dir"
+    )
+
+    if [[ $enable_taxii =~ ^[Yy]$ ]]; then
+        command+=("--taxii-server")
+    fi
+    if [[ $enable_insights =~ ^[Yy]$ ]]; then
+        command+=("--insights")
+    fi
+    if [[ $dev_mode =~ ^[Yy]$ ]]; then
+        command+=("--dev-mode")
+    fi
+    if [[ $enable_custom_certs =~ ^[Yy]$ ]]; then
+        command+=("--ssl-host-certs-path" "$host_certs_path")
+        command+=("--ssl-certs-file" "$certs_filename")
+    fi
+
+    info "Equivalent non-interactive command:"
+    printf "  "
+    printf "%q " "${command[@]}"
+    printf "\n\n"
 }
 
 # Display custom SSL certificate information
@@ -1023,6 +1090,7 @@ usage() {
     echo "Options:"
     echo "  --accept-defaults             Run non-interactively using default selections unless overriden by other options"
     echo "  --dev-mode                    Setup in developer mode (build from source)"
+    echo "  --print-dev-compose          Render the default development example and exit"
     echo "  --instance-name <name>        Name of the generated configuration"
     echo "  -h, --help                    Show this help and exit"
     echo "  --mongodb-connection <url>    MongoDB connection string"
@@ -1052,6 +1120,14 @@ while [[ $# -gt 0 ]]; do
         --accept-defaults)
             ACCEPT_DEFAULTS=true
             shift
+            ;;
+        --print-dev-compose)
+            DEV_MODE=y
+            ENABLE_TAXII=y
+            ENABLE_INSIGHTS=n
+            ENABLE_CUSTOM_CERTS=n
+            render_compose_override
+            exit 0
             ;;
         --dev-mode)
             AUTO_DEV_MODE=true
@@ -1323,6 +1399,13 @@ fi
 # Environment Configuration
 #---------------------------------------
 
+if $AUTO_DEV_MODE; then
+    DEV_MODE="y"
+else
+    prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
+    DEV_MODE="$PROMPT_YES_NO_RESULT"
+fi
+
 configure_host_mount_dir
 HOST_MOUNT_DIR="$CONFIGURE_HOST_MOUNT_DIR_REF"
 
@@ -1346,17 +1429,11 @@ echo ""
 # Additional Options
 #---------------------------------------
 
-if $AUTO_DEV_MODE; then
-    DEV_MODE="y"
-else
-    prompt_yes_no "Do you want to set up in developer mode (build from source)?" "N"
-    DEV_MODE="$PROMPT_YES_NO_RESULT"
-fi
 
 if [[ -z "${AUTO_HOST_CERTS_PATH}" && -z "${AUTO_CERTS_FILENAME}" ]]; then
     prompt_yes_no "Do you want to configure custom SSL certificates for containerized services?" "N"
     ENABLE_CUSTOM_CERTS="$PROMPT_YES_NO_RESULT"
-else 
+else
     ENABLE_CUSTOM_CERTS="y"
 fi
 
@@ -1400,6 +1477,7 @@ fi
 #---------------------------------------
 
 show_configuration_summary "$INSTANCE_DIR" "$OVERRIDE_FILE" "$DEV_MODE" "$ENABLE_TAXII" "$ENABLE_INSIGHTS" "$ENABLE_CUSTOM_CERTS" "$HOST_MOUNT_DIR"
+show_recreation_command "$DEPLOYMENT_DIR" "$INSTANCE_NAME" "$DATABASE_URL" "$HOST_MOUNT_DIR" "$DEV_MODE" "$ENABLE_TAXII" "$ENABLE_INSIGHTS" "$ENABLE_CUSTOM_CERTS" "$HOST_CERTS_PATH" "$CERTS_FILENAME"
 if [[ $ENABLE_CUSTOM_CERTS =~ ^[Yy]$ ]]; then
     show_certificate_info "$INSTANCE_DIR" "$HOST_CERTS_PATH" "$CERTS_FILENAME"
 fi

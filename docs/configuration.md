@@ -35,6 +35,8 @@ Available environment variables:
 | `ATTACKWB_FRONTEND_HTTP_PORT`         | `80`                                | Frontend HTTP port                 |
 | `ATTACKWB_FRONTEND_HTTPS_PORT`        | `443`                               | Frontend HTTPS port                |
 | `ATTACKWB_FRONTEND_NGINX_CONFIG_FILE` | `./configs/frontend/nginx.api.conf` | Path to nginx config file          |
+| `ATTACKWB_FRONTEND_ENV_FILE` | `./configs/frontend/.env` | Frontend process environment file |
+| `ATTACKWB_FRONTEND_CONFIG_DIR` | `./configs/frontend` | Directory containing optional public `config.json` |
 | `ATTACKWB_FRONTEND_CERTS_PATH`        | `./certs`                           | Path to SSL certificates for nginx |
 
 There are four sample nginx config files that can be used as reference:
@@ -43,6 +45,11 @@ There are four sample nginx config files that can be used as reference:
 - `nginx.ssl.conf`: Same as `nginx.conf` but with an SSL redirect. You need to provide your own SSL certs in the `ATTACKWB_FRONTEND_CERTS_PATH` directory.
 - `nginx.api.conf` (default): Nginx configuration with an additional `/api` location block for connecting to the REST API container.
 - `nginx.api.ssl.conf`: Same as `nginx.api.conf` but with an SSL redirect. You need to provide your own SSL certs in the `ATTACKWB_FRONTEND_CERTS_PATH` directory.
+
+In developer mode, Angular serves the frontend over HTTP. The generated override
+sets `WORKBENCH_FRONTEND_API_PROXY_TARGET=http://rest-api:3000`; published host ports do
+not change this internal target. For frontend-owned variables and build settings,
+see the [frontend configuration guide](https://github.com/mitre-attack/attack-workbench-frontend/blob/next/docs/admin/configuration.md).
 
 ### REST API
 
@@ -101,10 +108,76 @@ Each service has its own configuration directory:
 
 **Config files**: [configs/frontend/](../docker/example-setup/configs/frontend/)
 
-The frontend container is an Nginx instance which serves the frontend SPA and reverse proxies requests to the backend REST API.
-We provide a basic `nginx.conf` template in the aforementioned directory that should get you started.
-Refer to the [frontend documentation](https://github.com/mitre-attack/attack-workbench-frontend)
-for further details on customizing the Workbench frontend.
+The frontend container generates its public configuration before starting Nginx.
+Setup renames the embedded [frontend template](../docker/example-setup/configs/frontend/template.env)
+to `configs/frontend/.env` in both development and published mode. No checkout
+lookup, release asset, network request, or image inspection is needed. Select image
+tags independently in the instance's root `.env`.
+
+All upstream service templates carry a commented `Template-Version: 1.0` header.
+This is a template revision, not an application or image version. The frontend
+embedded copy, REST API copy, and TAXII copy match their source templates.
+Update embedded copies deliberately when upstream settings change.
+
+Keep `WORKBENCH_FRONTEND_*` settings in `configs/frontend/.env`. The instance's
+root `.env` controls Compose image tags, ports, and paths. Confirming overwrite
+removes the old instance directory and initializes fresh configuration from the
+embedded templates for every service. Setup does not back up or preserve edits.
+If a separate host mount directory is selected, generated configuration is copied
+there and replaces files with matching names.
+
+#### Optional JSON input
+
+Environment variables are enough for every supported frontend setting. The
+embedded `configs/frontend/config.json` lists every public setting with the
+frontend's production defaults. Setup copies it, but the file may be removed in
+both development and production; missing default
+JSON uses environment settings and defaults. An explicitly selected missing file
+via `WORKBENCH_FRONTEND_CONFIG_FILE` remains an error. The default JSON is not
+generated from environment variables and the container never writes back to it.
+The full example explicitly selects `https://attack.mitre.org` for
+`attackWebsiteUrl` and `ERROR` for `logLevel`, including when used in development.
+Without those JSON settings, development defaults are `http://localhost:8000`
+and `INFO`. Override them in `configs/frontend/.env`, or use `{}` or partial
+JSON to inherit the defaults for the current mode, for example:
+
+```json
+{"defaultLandingPage":"tactic","recommendedIndexes":[]}
+```
+
+To refresh the embedded example from the frontend's defaults, run these commands
+from a sibling `attack-workbench-frontend` checkout:
+
+```bash
+node scripts/compile-configuration.mjs
+node scripts/write-runtime-config.mjs --defaults-only --production --output ../attack-workbench-deployment/docker/example-setup/configs/frontend/config.json
+```
+
+`--defaults-only` ignores source JSON, dotenv files, and environment overrides.
+Refresh the example deliberately when adopting updated frontend settings.
+
+JSON is useful for larger arrays and existing configurations. Container environment
+values override this input; unspecified settings use frontend defaults. The
+read-only directory is mounted at `/etc/workbench`. Startup generates the effective
+browser document separately at `/usr/share/nginx/html/assets/config.json`.
+Native development similarly reads optional source JSON and writes generated
+output outside `src`. See the frontend configuration reference below for all fields.
+
+From the instance directory, apply settings with:
+
+```bash
+# Re-read container environment variables after editing the frontend .env.
+docker compose up -d --force-recreate frontend
+
+# Re-read mounted JSON when Compose Watch is stopped.
+docker compose restart frontend
+```
+
+Then reload the browser. In developer mode, Compose Watch restarts the frontend
+when the mounted JSON changes. An environment-file edit still requires recreation.
+The included Nginx configurations serve `/assets/config.json` with `no-store`.
+See the [frontend configuration reference](https://github.com/mitre-attack/attack-workbench-frontend/blob/next/docs/admin/configuration.md)
+for public settings, precedence, and validation.
 
 ### REST API
 
@@ -121,6 +194,37 @@ for further details on customizing the backend.
 - `MONGOSTORE_CRYPTO_SECRET` - Secret used to encrypt session data in MongoDB
 
 Generate secure secrets using: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
+
+#### REST API configuration files
+
+The instance's root `.env` controls Compose interpolation. API process variables
+belong in `configs/rest-api/.env` (or the file selected by
+`ATTACKWB_RESTAPI_ENV_FILE`). For this Compose network, the database address is
+`DATABASE_URL=mongodb://mongodb/attack-workspace`.
+
+The base Compose file mounts the JSON configuration selected by
+`ATTACKWB_RESTAPI_CONFIG_FILE` read-only at
+`/usr/src/app/resources/rest-api-service-config.json`. Enable loading it by setting
+`JSON_CONFIG_PATH=./resources/rest-api-service-config.json` in the API environment
+file. This mount is available with or without Watch.
+
+Apply configuration changes from the instance directory:
+
+```bash
+# Reload a JSON file when Watch is stopped.
+docker compose restart rest-api
+
+# Reload environment-file changes or a changed mount path.
+docker compose up -d --force-recreate rest-api
+
+# Check startup and authentication configuration messages.
+docker compose logs rest-api
+```
+
+In developer mode, Watch restarts the API automatically after edits to the mounted
+JSON file. Restarting alone does not replace a container's environment. API
+setting definitions, precedence, and authentication options remain in the
+[REST API configuration reference](https://github.com/mitre-attack/attack-workbench-rest-api/blob/next/docs/admin/configuration.md).
 
 ### Grafana
 

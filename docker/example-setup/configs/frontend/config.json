@@ -1,0 +1,14 @@
+{
+  "apiUrl": "api",
+  "attackWebsiteEnabled": false,
+  "attackWebsiteUrl": "https://attack.mitre.org",
+  "collectionManagerEnabled": true,
+  "recommendedIndexes": [
+    {
+      "name": "MITRE ATT&CK",
+      "url": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/index.json"
+    }
+  ],
+  "logLevel": "ERROR",
+  "defaultLandingPage": ""
+}
