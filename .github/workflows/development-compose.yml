@@ -1,0 +1,17 @@
+name: Development Compose example
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check generated development example
+        run: |
+          bash -n docker/setup-workbench.sh
+          bash docker/setup-workbench.sh --print-dev-compose > /tmp/compose.dev.yaml
+          diff -u docker/example-setup/compose.dev.yaml /tmp/compose.dev.yaml

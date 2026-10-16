@@ -118,3 +118,14 @@ For detailed information on contributing to the ATT&CK Workbench, including comm
 ## Questions?
 
 For questions about this process, please open an issue in the relevant repository or contact the development team.
+
+## Development Compose template
+
+`docker/setup-workbench.sh` owns the development service definitions. After editing
+its renderer, refresh the reference file from the repository root:
+
+```bash
+bash docker/setup-workbench.sh --print-dev-compose > docker/example-setup/compose.dev.yaml
+```
+
+CI checks that the rendered file matches the example.

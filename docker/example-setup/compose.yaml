@@ -10,6 +10,9 @@ services:
     volumes:
       - "${ATTACKWB_FRONTEND_NGINX_CONFIG_FILE:-./configs/frontend/nginx.api.conf}:/etc/nginx/conf.d/default.conf:ro"
       - "${ATTACKWB_FRONTEND_CERTS_PATH:-./certs}:/etc/nginx/certs:ro"
+      - "${ATTACKWB_FRONTEND_CONFIG_DIR:-./configs/frontend}:/etc/workbench:ro"
+    env_file:
+      - "${ATTACKWB_FRONTEND_ENV_FILE:-./configs/frontend/.env}"
     restart: unless-stopped
     logging:
       driver: "json-file"
